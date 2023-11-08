@@ -17,7 +17,7 @@ data_n = data(ui,2);
 data_k = data(ui,3);
 
 %% Smooth
-[Ddata_n,Ddata_k] = smooth_nk(data_wl(2:end),diff(data_n)./diff(data_wl),diff(data_k)./diff(data_wl),150,3);
+[Ddata_n,Ddata_k] = smooth_nk(use_gpu,cuda_dir_path,data_wl(2:end),diff(data_n)./diff(data_wl),diff(data_k)./diff(data_wl),150,3);
 data_n = cumtrapz(data_wl,[0;Ddata_n]) + data_n(1);
 data_k = cumtrapz(data_wl,[0;Ddata_k]) + data_k(1);
 
@@ -47,13 +47,27 @@ end
 
 end
 
-function [n,k] = smooth_nk(wl,n,k,smooth_range,smooth_rep)
+function [n,k] = smooth_nk(use_gpu,cuda_dir_path,wl,n,k,smooth_range,smooth_rep)
 
 smooth_wl = wl > 0.5;
 
+if use_gpu
+    cuda_mySmooth = setup_kernel('mySmooth',cuda_dir_path,length(wl));
+end
+
 for i = 1:smooth_rep
-    n(smooth_wl) = smooth(wl(smooth_wl),n(smooth_wl),smooth_range,'sgolay',2);
-    k(smooth_wl) = smooth(wl(smooth_wl),k(smooth_wl),smooth_range,'sgolay',2);
+    if use_gpu
+        smoothing_nk = complex(zeros(sum(smooth_wl),1,'gpuArray'));
+        smoothing_nk = feval(cuda_mySmooth,...
+                                          smoothing_nk,...
+                                          wl(smooth_wl),n(smooth_wl)+1i*k(smooth_wl),...
+                                          abs(smooth_range/2/length(wl)*(max(wl)-min(wl))),uint32(smooth_range),uint32(sum(smooth_wl)));
+        n(smooth_wl) = real(smoothing_nk);
+        k(smooth_wl) = imag(smoothing_nk);
+    else
+        n(smooth_wl) = smooth(wl(smooth_wl),n(smooth_wl),smooth_range,'sgolay',2);
+        k(smooth_wl) = smooth(wl(smooth_wl),k(smooth_wl),smooth_range,'sgolay',2);
+    end
 end
 
 end

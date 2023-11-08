@@ -47,7 +47,7 @@ for i = 1:diff_order
     wl_all{i+1} = (wl_all{i}(1:end-1) + wl_all{i}(2:end))/2;
     n_all{i+1} = diff(n_all{i})./diff(wl_all{i});
     
-    n_all{i+1} = smooth_n(wl_all{i+1},n_all{i+1},5,3);
+    n_all{i+1} = smooth_n(false,'',wl_all{i+1},n_all{i+1},5,3);
 end
 
 data_wl = wl_all{end};
@@ -67,9 +67,8 @@ idx = imag(target_n)<0;
 target_n(idx) = real(target_n(idx)); % loss can't be negative
 
 %% Smooth the final data
-target_n = gather(target_n);
 for i = 1:3
-    Dn = smooth_n(wavelength(2:end)*1e-3,diff(real(target_n))./diff(wavelength),max(ceil(length(wavelength)/2000),3),1);
+    Dn = smooth_n(use_gpu,cuda_dir_path,wavelength(2:end)*1e-3,diff(real(target_n))./diff(wavelength),max(ceil(length(wavelength)/2000),3),1);
     target_n = cumtrapz(wavelength,[0;Dn]) + target_n(1);
 end
 for i = 1:5
@@ -82,13 +81,26 @@ end
 
 end
 
-function n = smooth_n(wl,n,smooth_range,smooth_rep)
+function n = smooth_n(use_gpu,cuda_dir_path,wl,n,smooth_range,smooth_rep)
 
 smooth_wl = wl > 0.5;
 
+if use_gpu
+    cuda_mySmooth = setup_kernel('mySmooth',cuda_dir_path,length(wl));
+end
+
 if smooth_range ~= 0
     for i = 1:smooth_rep
-        n(smooth_wl) = smooth(wl(smooth_wl),n(smooth_wl),smooth_range,'sgolay',2);
+        if use_gpu
+            smoothing_n = complex(zeros(sum(smooth_wl),1,'gpuArray'));
+            smoothing_n = feval(cuda_mySmooth,...
+                                              smoothing_n,...
+                                              wl(smooth_wl),complex(n(smooth_wl)),...
+                                              abs(smooth_range/2/length(wl)*(max(wl)-min(wl))),uint32(smooth_range),uint32(sum(smooth_wl)));
+            n(smooth_wl) = real(smoothing_n);
+        else
+            n(smooth_wl) = smooth(wl(smooth_wl),n(smooth_wl),smooth_range,'sgolay',2);
+        end
     end
 end
 
