@@ -1,7 +1,7 @@
 # gas_UPPE
 This is the shared package to simulate pulse propagation in a gas-filled hollow-core fiber with MM-UPPE.
 
-It solves the pulse propagation with RK4IP if single mode and MPA if multimode. Both scalar and polarized scenarios can be simulated. The gas encompasses inert and Raman-active gases ( $H_2$ ). Besides, it is implemented with an adaptive step-size control for both methods, which improves the performance and allow users to be free from worrying the reliability of a simulation. Photoionization is included as well.
+It solves the pulse propagation with RK4IP if single mode and MPA if multimode. Both scalar and polarized scenarios can be simulated. The gas encompasses inert (He, Ne, Ar, Kr, Xe) and Raman-active gases (H<sub>2</sub>, N<sub>2</sub>, O<sub>2</sub>, air, and CH<sub>4</sub>). Besides, it is implemented with an adaptive step-size control for both methods, which improves the performance and allows users to be free from worrying the reliability of a simulation. Photoionization is included as well.
 
 For multimode, GPU computations (with Nvidia cuda) is highly recommended. I have written a lot of cuda files to speed up simulations. It is controlled by "sim.gpu_yes=true or false".
 
