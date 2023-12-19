@@ -70,13 +70,24 @@ switch gas.gas_material
         vib.preR = gas.Ng*vib.Dalpha^2/4.*(2*vib_J+1).*rho(vib_J)./(vib.omega*1e12);
         
         gas.H2 = struct('R', rot,...
-                        'V', vib,...
-                        'gJ',gJ,'max_J',max_J);
+                        'V', vib);
     case {'N2','O2','air'}
         if ismember(gas.gas_material,{'N2','air'})
             % T2
             rot.T2 = 1e6/(pi*3570*eta); % ps
-            vib.T2 = 1e6/(pi*22.5); % ps
+            % Current reference has only T2 = 1e6/(pi*22.5)
+            % It doesn't lead to consistent temporal feature as in 
+            % "High energy and narrow linewidth N2-filled hollow-core fiber
+            % laser at 1.4 μm" by Hong et al. (2023)
+            % Therefore, I adjust it myself, following the relation of
+            % Raman_linewidth = A/eta+B*eta,
+            % whose mininum is at T2_constant with the value 22.5 as in the
+            % current reference.
+            % Since current reference says that 22.5 should be valid as
+            % eta<10, I made it at the minimum point where there is a
+            % relatively larger region of points around 22.5.
+            T2_constant = 0.02;
+            vib.T2 = 1e6/(pi*(11.25*T2_constant/eta +11.25/T2_constant*eta)); %1e6/(pi*22.5); % ps
 
             % polarizability
             % Below are taken from papers. Don't modify them.
@@ -126,13 +137,15 @@ switch gas.gas_material
             end
             
             gas.N2 = struct('R', rot,...
-                            'V', vib,...
-                            'gJ',gJ,'max_J',max_J);
+                            'V', vib);
         end
         if ismember(gas.gas_material,{'O2','air'})
             % T2
             rot.T2 = 1e6/(pi*1701*eta); % ps
-            vib.T2 = 1e6/(pi*54); % ps
+            % T2 should be strongly pressure-dependent; however, there is
+            % no existing literature data. I modified it as N2 above.
+            T2_constant = 0.02;
+            vib.T2 = 1e6/(pi*(27*T2_constant/eta +27/T2_constant*eta)); %1e6/(pi*54); % ps
 
             % polarizability
             % Below are taken from papers. Don't modify them.
@@ -182,8 +195,7 @@ switch gas.gas_material
             end
             
             gas.O2 = struct('R', rot,...
-                            'V', vib,...
-                            'gJ',gJ,'max_J',max_J);
+                            'V', vib);
         end
     case 'CH4'
         % Due to the symmetry structure of CH4, it has no rotational Raman

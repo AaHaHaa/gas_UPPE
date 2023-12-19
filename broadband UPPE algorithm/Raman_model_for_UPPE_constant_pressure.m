@@ -146,6 +146,7 @@ if sim.Raman_model ~= 0
     end
     gas_eqn.m2 = m2; % record the index for rearrangement which will be useful later
 else % no Raman
+    Raw = []; Rbw = [];
     gas_eqn = struct('Nt',gas_Nt,'upsampling_zeros', upsampling_zeros,'n',n);
     clear upsampling_zeros;
 end

@@ -1,14 +1,15 @@
 function [A_out,...
           save_z,save_deltaZ,...
           T_delay_out,...
-          delta_permittivity,relative_Ne] = SteppingCaller_constant_pressure(fiber, sim, gas, gas_eqn,...
+          delta_permittivity,relative_Ne] = SteppingCaller_gradient_pressure(fiber, sim, gas, gas_eqn,...
                                                                              save_z, save_points,...
                                                                              initial_condition,...
-                                                                             D_op, D_op_upsampling,...
                                                                              SK_info, SRa_info, SRb_info,...
-                                                                             Raw, Rbw,...
-                                                                             prefactor, sponRS_prefactor)
-%STEPPINGCALLER_CONSTANT_PRESSURE It starts the pulse propagation.
+                                                                             prefactor, sponRS_prefactor,...
+                                                                             time_window,...
+                                                                             omegas, wavelength,...
+                                                                             gas_func)
+%STEPPINGCALLER_GRADIENT_PRESSURE It starts the pulse propagation.
 
 Nt = size(initial_condition.fields,1);
 num_modes = size(initial_condition.fields,2);
@@ -17,7 +18,7 @@ dt = initial_condition.dt;
 save_deltaZ = zeros(save_points,1);
 T_delay_out = zeros(save_points,1);
 if sim.Raman_model ~= 0 && sim.scalar
-    delta_permittivity = zeros(Nt,num_modes,size(gas_eqn.R_delta_permittivity,2),save_points);
+    delta_permittivity = zeros(Nt,num_modes,gas_eqn.num_Raman,save_points);
 else
     delta_permittivity = []; % dummay variable for output
 end
@@ -85,6 +86,18 @@ if sim.progress_bar
     progress_bar_i = 1;
 end
 
+% Use this to control the number of updated time for the gas pressure below 100 times.
+num_gas_updates = 100;
+gas_pressure_steps = (1:num_gas_updates)*(gas.pressure_out-gas.pressure_in)/num_gas_updates + gas.pressure_in;
+gas_i = 0;
+if gas.pressure_out > gas.pressure_in % increasing gas pressure
+    gas_stepping_condition = @(P,i) P - gas_pressure_steps(i);
+elseif gas.pressure_out < gas.pressure_in % decreasing gas pressure
+    gas_stepping_condition = @(P,i) gas_pressure_steps(i) - P;
+else % same input and output pressures
+    gas_stepping_condition = @(P,i) false; % There's no need to update propagating parameters due to the unchanged pressure
+end
+
 z = 0;
 save_i = 2; % the 1st one is the initial field
 a5 = [];
@@ -95,7 +108,11 @@ sim.deltaZ = 1e-6; % m; start with a small value to avoid initial blowup
 save_deltaZ(1) = sim.deltaZ;
 sim.last_deltaZ = 1; % randomly put a number, 1, for initialization
 
-GMMNLSE_func = str2func(['stepping_' sim.step_method '_constant_pressure']);
+time_to_update_D = 100; D_idx = time_to_update_D;
+pressure0 = 1.01325e5; % Pa
+temperature0 = 273.15; % 0 degree Celsius
+
+GMMNLSE_func = str2func(['stepping_' sim.step_method '_gradient_pressure']);
 
 % Then start the propagation
 while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical error
@@ -105,6 +122,24 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
               'The "cancel" button of the progress bar has been clicked.');
     end
 
+    % Update Raman parameters and dispersion based on a different gradient pressure
+    % Calculate the required parameters based on the gas pressure at the position z
+    gas_pressure = sqrt( gas.pressure_in^2 + z/fiber.L0*(gas.pressure_out^2-gas.pressure_in^2) );
+    % eta is calculated with the unit, amagat
+    % Ideal gas law is used here.
+    eta = gas_pressure/pressure0*temperature0/gas.temperature;
+    if z == 0 || gas_stepping_condition(gas_pressure,gas_i) > 0
+        [gas_i,...
+         gas,gas_eqn,...
+         Raw,Rbw,...
+         D_op,D_op_upsampling] = gas_func.update_R_D(fiber,sim,gas,gas_eqn,...
+                                                     gas_pressure_steps,...
+                                                     gas_pressure,eta,...
+                                                     time_window,...
+                                                     omegas,wavelength);
+    end
+
+    % Start the steppping
     ever_fail = false;
     previous_A = last_A;
     previous_a5 = a5;
@@ -123,7 +158,8 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
                                              Raw, Rbw,...
                                              D_op_upsampling,...
                                              prefactor, sponRS_prefactor,...
-                                             dt, fiber.SR(1));
+                                             dt, fiber.SR(1),...
+                                             eta);
 
         if ~success
             ever_fail = true;
@@ -141,7 +177,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
     
     % Check for any NaN elements
     if any(any(isnan(last_A))) %any(isnan(last_A),'all')
-        error('SteppingCaller_adaptive_constant_pressure:NaNError',...
+        error('SteppingCaller_adaptive:NaNError',...
               'NaN field encountered, aborting.\nReduce the step size or increase the temporal or frequency window.');
     end
 
@@ -172,7 +208,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
             T_delay = T_delay + TCenter*dt;
         end
     end
-    
+
     % Update z
     z = z + sim.deltaZ;
     % Because the adaptive-step algorithm determines the step size by 
@@ -188,13 +224,18 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
     % window but scaled according to the spectral intensity to prevent 
     % taking into account betas where there's no light at all or where 
     % there's some light starting to grow.
-    eff_range_D = find_range_D(abs(last_A).^2,imag(D_op));
-    min_beat_length = 2*pi/eff_range_D;
-    if strcmp(sim.step_method,'MPA')
-        deltaZ_resolve_beat_length = min_beat_length/4*sim.MPA.M;
-    else
-        deltaZ_resolve_beat_length = min_beat_length/4;
+    if D_idx == time_to_update_D
+        eff_range_D = find_range_D(abs(last_A).^2,imag(D_op));
+        min_beat_length = 2*pi/eff_range_D;
+        if strcmp(sim.step_method,'MPA')
+            deltaZ_resolve_beat_length = min_beat_length/4*sim.MPA.M;
+        else
+            deltaZ_resolve_beat_length = min_beat_length/4;
+        end
+        
+        D_idx = 0;
     end
+    D_idx = D_idx + 1;
 
     sim.deltaZ = min([opt_deltaZ,save_z(end)-z,sim.adaptive_deltaZ.max_deltaZ,deltaZ_resolve_beat_length]);
 
@@ -205,7 +246,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
             delta_permittivity(:,:,:,1) = calc_permittivity(sim,gas,gas_eqn,last_A,Nt);
         end
         if sim.photoionization_model ~= 0
-            relative_Ne(:,:,1) = calc_Ne(A_out_ii, dt, fiber.SR(1), gas, gas_eqn, sim);
+            relative_Ne(:,:,1) = calc_Ne(A_out_ii, dt, fiber.SR(1), gas, gas_eqn, sim, eta);
         end
     end
     if z >= save_z(save_i)-eps(z)
@@ -223,7 +264,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
             delta_permittivity(:,:,:,save_i) = calc_permittivity(sim,gas,gas_eqn,last_A,Nt);
         end
         if sim.photoionization_model ~= 0
-            relative_Ne(:,:,save_i) = calc_Ne(A_out_ii, dt, fiber.SR(1), gas, gas_eqn, sim);
+            relative_Ne(:,:,save_i) = calc_Ne(A_out_ii, dt, fiber.SR(1), gas, gas_eqn, sim, eta);
         end
 
         T_delay_out(save_i) = T_delay;
@@ -296,12 +337,12 @@ end
 
 end
 % -------------------------------------------------------------------------
-function relative_Ne = calc_Ne(A_t, dt, inverse_Aeff, gas, gas_eqn, sim)
+function relative_Ne = calc_Ne(A_t, dt, inverse_Aeff, gas, gas_eqn, sim, eta)
 
-Ne = photoionization_PPT_model(A_t, inverse_Aeff, gas.ionization_energy, sim.f0, dt, gas.Ng,...
+Ne = photoionization_PPT_model(A_t, inverse_Aeff, gas.ionization_energy, sim.f0, dt, gas.Ng*eta,...
                                gas_eqn.erfi_x, gas_eqn.erfi_y,...
                                sim.ellipticity);
-relative_Ne = Ne/gas.Ng;
+relative_Ne = Ne/(gas.Ng*eta);
 
 if sim.gpu_yes
     relative_Ne = gather(relative_Ne);

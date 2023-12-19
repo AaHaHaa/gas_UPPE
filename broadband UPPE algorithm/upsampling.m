@@ -26,11 +26,9 @@ end
 prefactor{1} = cat(1,prefactor{1}(1:n),upsampling_zeros(:,1),prefactor{1}(n+1:end));
 prefactor{2} = cat(1,prefactor{2}(1:n,:,:),real(upsampling_zeros),prefactor{2}(n+1:end,:,:));
 
-if ~isempty(D_op) % not computing with gradient pressure
-    if sim.photoionization_model && isequal(sim.step_method,'Rk4IP')  % photoionization is currently implemented in single mode only
-        prefactor{3} = cat(1,prefactor{3}(1:n),upsampling_zeros(:,1),prefactor{3}(n+1:end));
-        prefactor{4} = cat(1,prefactor{4}(1:n,:),real(upsampling_zeros),prefactor{4}(n+1:end,:));
-    end
+if sim.photoionization_model
+    prefactor{3} = cat(1,prefactor{3}(1:n),upsampling_zeros(:,1),prefactor{3}(n+1:end));
+    prefactor{4} = cat(1,prefactor{4}(1:n,:),real(upsampling_zeros),prefactor{4}(n+1:end,:));
 end
 
 end

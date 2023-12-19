@@ -1,6 +1,7 @@
-function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, sim, gas)
-%UPPE_PROPAGATE_CONSTANT_PRESSURE Propagate an initial multimode pulse through 
-%an arbitrary distance of a hollow-core fiber with an adaptive-step method.
+function foutput = UPPE_propagate_gradient_pressure(fiber, initial_condition, sim, gas)
+%UPPE_PROPAGATE_GRADIENT_PRESSURE Propagate an initial multimode pulse 
+%through an arbitrary distance of an optical fiber with an adaptive step 
+%method.
 %
 % -------------------------------------------------------------------------
 %
@@ -12,7 +13,6 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 %                                    otherwise, "nm" can be both num_modes or 2*num_modes depending on whether there's birefringence.
 %                   betas(i, :) = (i-1)th order dispersion coefficient for each mode, in ps^n/m
 %
-%           SR - SR tensor, in m^-2
 %           L0 - length of fiber, in m
 %
 % -------------------------------------------------------------------------
@@ -23,8 +23,7 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 %       fields - initial field, in W^1/2, (N-by-num_modes).
 %                If the size is (N-by-num_modes-by-S), then it will take the last S.
 %
-%                num_modes = num_spatial_modes if "sim.scalar = true"
-%                num_modes = num_spatial_modes*2 (spatial modes + polarization modes-x,y) otherwise
+%                num_modes = num_modes
 %
 % -------------------------------------------------------------------------
 %
@@ -36,42 +35,8 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 %                   that is to say, fiber.betas([1 2],:) = fiber.betas([1 2],:) - sim.betas;
 %                   (2,1) column vector;
 %                   if not set, no "sim.betas", the simulation will be run relative to the first mode
-%           midx - mode index; an integer array
 %           f0 - center frequency, in THz
 %           save_period - spatial period between saves, in m. 0 = only save input and output
-%           X3 - electronic nonlinearity (Nt,num_modes)
-%
-%       Mode info -->
-%
-%           mode_profiles.mode_profiles - 2D mode profiles of each mode
-%           mode_profiles.norms - the norms of the mode profiles
-%           mode_profiles.r: (m)
-%           mode_profiles.dr: (m)
-%           mode_profiles.dtheta: (rad)
-%
-%       MPA -->
-%
-%           MPA.M - parallel extent for MPA;
-%                   1 is no parallelization,
-%                   5-20 is recommended; there are strongly diminishing returns after 5-10.
-%           MPA.n_tot_max - maximum number of iterations for MPA
-%                           This doesn't really matter because if the step size is too large, the algorithm will diverge after a few iterations.
-%           MPA.n_tot_min - minimum number of iterations for MPA
-%           MPA.tol - tolerance for convergence for MPA
-%                     Value of the average NRMSE between consecutive itertaions in MPA at which the step is considered converged.
-%
-%       Polarization included -->
-%
-%           scalar - 0(false) = consider polarization mode coupling
-%                    1(true) = don't consider polarization mode coupling
-%
-%           *If under scalar field, the input field takes only the scalar fields, e.g., [mode1, mode2, mode3......].
-%           *Otherwise, the input field of each polarization needs to be specified in the order of [mode1_+ mode1_- mode2_+ mode2_-......], where (+,-) can be (x,y) or any orthogonal modes.
-%           *SRSK is always loaded in a dimension of num_spatial_modes^4. It's automatically calculated to its polarized version in the code.
-%
-%           ellipticity - the ellipticity of the polarization modes; Please refer to "Nonlinear Fiber Optics, eq (6.1.18) Agrawal" for the equations.
-%                         0: linear polarization   -> (+,-)=(x,y)
-%                         1: circular polarization -> (+,-)=(right,left)
 %
 %       Adaptive method -->
 %
@@ -85,9 +50,6 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 %                     Whether or not to use the GPU. Using the GPU is HIGHLY recommended, as a speedup of 50-100x should be possible.
 %           Raman_model - 0 = ignore Raman effect
 %                         1 = include gas Raman
-%           photoionization_model - 0 = ignore the photoionization effect
-%                                   1 = include the photoionization effect
-%                                   (Photoionization model is implemented currently in linearly-polarized single-mode scenarios.)
 %
 %       Others -->
 %
@@ -107,34 +69,9 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 %
 % =========================================================================
 %
-% All the cases of num_modes for input fields and betas:
-%
-%                 | field   betas   SRSK
-%   --------------------------------------------
-%    s            |   m       m      m
-%    p            |   2m     m,2m    m
-%
-%   m: num_spatial_modes
-%   s: scalar fields, p: polarized fields
-%
-%   If num_modes(betas) = m, it's assumed that polarization modes are
-%   degenerate in betas and is expanded into 2m modes automatically in 
-%   the code, that is, (m,2m)->2m.
-%
-%   SRSK is always in a dimension of num_spatial_modes^4.
-%
-% =========================================================================
-%
 % Output:
 % foutput.fields - (N, num_modes, num_save_points) matrix with the multimode field at each save point
 % foutput.dt - time grid point spacing, to fully identify the field
-% foutput.z - the propagation length of the saved points
-% foutput.deltaZ - the step size at each saved points
-% foutput.betas - the [betas0,betas1] used for the moving frame
-% foutput.t_delay - the time delay of each pulse which is centered in the time window during propagation
-% foutput.seconds - time spent in the main loop
-% foutput.delta_permittivity - (N, num_modes, num_Raman, num_save_points); the index change from each Raman contribution
-% foutput.relative_Ne - (N,1); the ionized electron density
 
 %% Check the precision of the input fields and make it with "double"-precision
 % Consider only the last fields of the initial condition
@@ -232,7 +169,7 @@ if sim.Raman_model ~= 0
     % long dephasing time (nanoseconds) where most physics under 
     % investigation happens around fs or ps time scale. Using a large time 
     % window in simulations is a waste of time by 1000 times.
-    if time_window < max_T2*10 % 10 is simply some random large number
+    if time_window < max_T2*10
         gas.model = 0;
     else
         gas.model = 1;
@@ -252,7 +189,7 @@ if sim.gpu_yes
      sim.cuda_MPA_psi_update] = setup_stepping_kernel(sim,gas_Nt,num_modes);
 end
 
-%% Pre-calculate the dispersion term
+%% Pre-calculate sim.betas for the dispersion term
 % The "omegas" here is actually (omega - omega0), omega: true angular frequency
 %                                                 omega0: central angular frequency (=2*pi*f0)
 if sim.gpu_yes
@@ -261,14 +198,17 @@ if sim.gpu_yes
 end
 omegas = 2*pi*ifftshift(linspace(-floor(Nt/2), floor((Nt-1)/2), Nt))'/time_window; % in 1/ps, in the order that the fft gives
 real_omegas = (omegas + 2*pi*sim.f0)*1e12; % Hz
+c = 299792458; % m/s
+wavelength = 2*pi*c./real_omegas; % m
 
-% The dispersion term in the UPPE, in frequency space
-[D_op,sim] = calc_D_op(fiber,sim,dt,omegas,initial_condition.fields);
+if ~isfield(sim,'betas')
+    sim.betas = calc_sim_betas(fiber,dt,omegas,initial_condition.fields);
+end
 
 %% Pre-calculate the factor used in UPPE (the nonlinear constant)
 prefactor = {1i*real_omegas/4./ifftshift(sim.mode_profiles.norms(:,1),1).^4,... % I use the 1st mode for norm^4 computation.
              ...                                                                % This can create certain amount of deviation for higher-order modes, but it should be acceptable; otherwise, the computation is too heavy.
-             3*permittivity0*ifftshift(sim.X3,1)/4}; % for Kerr term
+             3*permittivity0*ifftshift(sim.X3_prefactor,1)/4}; % for Kerr term
 
 % Photoionization prefactor
 if sim.photoionization_model
@@ -296,15 +236,16 @@ end
 % important to apply it to Kerr as well, especially when running
 % supercontinuum generation or when your frequency window isn't large
 % enough.
-[D_op_upsampling,prefactor,...
- upsampling_zeros] = upsampling(sim,Nt,gas_Nt,num_modes,D_op,prefactor);
+[~,prefactor,...
+ upsampling_zeros] = upsampling(sim,Nt,gas_Nt,num_modes,[],prefactor);
 
 %% Set up some parameters for the gas Raman generation equations
 % gas_eqn is a container of useful values that will be continuously used
 % during propagation.
-[Raw,Rbw,...
- gas_eqn] = Raman_model_for_UPPE_constant_pressure(sim,gas,time_window,Nt,...
-                                                   gas_Nt,gas_dt,upsampling_zeros);
+gas_func = Raman_model_for_UPPE_gradient_pressure();
+
+gas_eqn = gas_func.precalc_gas_params(sim,gas,Nt,...
+                                      gas_Nt,gas_dt,upsampling_zeros);
 
 %% Include spontaneous Raman scattering
 % Current model of spontaneous Raman scattering assumes only isotropic
@@ -324,7 +265,7 @@ end
 % Its size needs to be modified according to the stepping algorithm
 if isequal(sim.step_method,'MPA')
     prefactor{2} = permute(prefactor{2},[1,3,2]); % size: (Nt, M+1, num_modes)
-    if sim.include_sponRS
+    if sim.Raman_model ~= 0
         sponRS_prefactor{1} = permute(sponRS_prefactor{1},[1,3,2]); % size: (Nt, M+1, num_modes)
     end
 end
@@ -355,13 +296,14 @@ run_start = tic;
 [A_out,...
  save_z,save_deltaZ,...
  T_delay_out,...
- delta_permittivity,relative_Ne] = SteppingCaller_constant_pressure(fiber, sim, gas, gas_eqn,...
+ delta_permittivity,relative_Ne] = SteppingCaller_gradient_pressure(fiber, sim, gas, gas_eqn,...
                                                                     save_z, save_points,...
                                                                     initial_condition,...
-                                                                    D_op, D_op_upsampling,...
                                                                     SK_info, SRa_info, SRb_info,...
-                                                                    Raw, Rbw,...
-                                                                    prefactor, sponRS_prefactor);
+                                                                    prefactor, sponRS_prefactor,...
+                                                                    time_window,...
+                                                                    omegas,wavelength,...
+                                                                    gas_func);
 % -------------------------------------------------------------------------
 % Just to get an accurate timing, wait before recording the time
 if sim.gpu_yes

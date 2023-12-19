@@ -1,5 +1,6 @@
 function [ne,DneDt] = photoionization_PPT_model(A_t, inverse_Aeff, ionization_energy, f0, dt, Ng,...
-                                                erfi_x, erfi_y)
+                                                erfi_x, erfi_y,...
+                                                ellipticity)
 %PHOTOIONIZATION_PPT_MODEL This code computes the ionized free electrons
 %with the Perelomov-Popov-Terent'ev (PPT) photoionization model. It's used
 %as a helper function in the gas-UPPE model.
@@ -13,14 +14,15 @@ function [ne,DneDt] = photoionization_PPT_model(A_t, inverse_Aeff, ionization_en
 %   dt: scalar (ps)
 %   Ng: the gas number density (1/m^3)
 %   erfi_x, erfi_y: (Nt,1); the lookup table for the imaginary error function, erfi()
+%   ellipticity: a scalar; only ellipticity=0 is allowed
 %
 % Output:
 %   ne: (Nt,1); the free electron number density (1/m^3)
 %   DneDt: (Nt,1); the time derivative of ne (1/m^3/s)
 
 [Nt,num_modes] = size(A_t);
-if num_modes ~= 1
-    error('Photoionization model works only for single mode.');
+if num_modes ~= 1 && ellipticity ~= 0
+    error('Photoionization model works only for linearly polarized single mode.');
 end
 
 % Find instantaneous frequency of the pulse

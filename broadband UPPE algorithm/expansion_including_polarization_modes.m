@@ -2,7 +2,11 @@ function [sim,fiber] = expansion_including_polarization_modes(sim,fiber,num_mode
 %EXPANSION_INCLUDING_POLARIZATION_MODES It extends betas into 2*num_spatial_modes if necessary.
 
 num_modes_betas = size(fiber.betas,2);
-num_modes_X3 = size(sim.X3,2);
+if isfield(sim,'X3') % constant pressure
+    num_modes_X3 = size(sim.X3,2);
+else % gradient pressure
+    num_modes_X3 = size(sim.X3_prefactor,2);
+end
 
 if ~sim.scalar
     % betas

@@ -1,58 +1,33 @@
 function [A1,a5,...
-          opt_deltaZ,success] = stepping_RK4IP_constant_pressure(A0, a5_1,...
+          opt_deltaZ,success] = stepping_RK4IP_gradient_pressure(A0, a5_1,...
                                                                  sim, gas, gas_eqn,...
                                                                  SK_info, SRa_info, SRb_info,...
                                                                  Raw, Rbw,...
                                                                  D_op,...
                                                                  prefactor, sponRS_prefactor,...
-                                                                 dt, inverse_Aeff)
-%STEPPING_RK4IP_CONSTANT_PRESSURE Take one step according to the UPPE, using the 
+                                                                 dt, inverse_Aeff,...
+                                                                 eta)
+%STEPPING_RK4IP_GRADIENT_PRESSURE Take one step according to the UPPE, using the 
 %Runge-kutta under the interaction picture
+% A0 - initial field, (N, num_modes) matrix, in the frequency domain in W^1/2
+% dt - time grid point spacing, in ps
 %
-% Input:
-%    A0 - initial field, (N, num_modes) matrix, in the frequency domain in W^1/2
-%    a5_1 - the previous RK4 term that can be reused
+% sim.f0 - center frequency, in THz
+% sim.deltaZ - step size, in m
+% sim.singe_yes - 1 = single, 0 = double
+% sim.gpu_yes - 1 = GPU, 0 = CPU
+% sim.Raman_model - which Raman model is used
 %
-%    sim.scalar - scalar or polarized fields
-%    sim.gpu_yes - true = GPU, false = CPU
+% nonlin_const - n2*w0/c, in W^-1 m
+% SRa_info.SRa - SRa tensor, in m^-2
+% SRa_info.nonzero_midx1234s - required SR indices in total
+% SRa_info.nonzero_midx34s - required (SR) indices for partial Raman term (only for CPU computation)
 %
-%    sim.cuda_SRSK - the cuda for computing SR and SK values
-%
-%    sim.Raman_model - which Raman model is used
-%
-%    sim.f0 - center frequency, in THz
-%    sim.deltaZ - step size, in m
-%
-%    sim.adaptive_deltaZ.threshold - the accuracy used to determined whether to increase or decrease the step size
-%
-%    gas
-%    gas_eqn
-%
-%    SRa_info.SRa - SRa tensor; m^-2
-%    SRa_info.nonzero_midx1234s - required SRa indices in total
-%    SRa_info.nonzero_midx34s - required (SRa) indices for partial Raman term (only for CPU computation)
-%    SRb_info.SRb - SRb tensor; m^-2
-%    SRb_info.nonzero_midx1234s - required SRb indices in total
-%    SRb_info.nonzero_midx34s - required (SRb) indices for partial Raman term (only for CPU computation)
-%    SK_info.SK - SK tensor; m^2 (unempty if considering polarizaton modes)
-%    SK_info.nonzero_midx1234s - required SK indices in total (unempty if considering polarizaton modes)
-%
-%    Raw - isotropic Raman response in the frequency domain
-%    Rbw - anisotropic Raman response in the frequency domain
-%
-%    D_op - dispersion term Dz/2 (N, num_modes)
-%
-%    prefactor
-%    sponRS_prefactor - prefactor for the spontaneous Raman scattering
-%
-%    dt - time grid point spacing, in ps
-%    inverse_Aeff - 1/Aeff for calculating photoionization (1/m^2)
+% omegas - angular frequencies in 1/ps, in the fft ordering
+% D - dispersion term for all modes in m^-1, with size (N, num_modes)
 %
 % Output:
-%    A1 - the field (in the frequency domain) after one step size (N, num_modes)
-%    a5 - the RK4 term that can be reused in the next step
-%    opt_deltaZ - recommended step size
-%    success - whether the current step size is sufficiently small for the required tolerance
+% A1 - (N, num_modes) matrix with the field after the step, for each mode, in the frequency domain
 
 [Nt,num_modes] = size(A0);
 
@@ -61,20 +36,20 @@ if sim.gpu_yes
     Kerr = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
     Ra = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
     Rb = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
-    if sim.include_sponRS
+    if sim.Raman_model ~= 0
         rand_factor = randn(size(sponRS_prefactor{1}),'gpuArray').*exp(1i*2*pi*rand(size(sponRS_prefactor{1}),'gpuArray'));
     end
 else
-    Kerr = complex(zeros(gas_eqn.Nt, num_modes));
+    Kerr = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
     Ra = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
     Rb = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
-    if sim.include_sponRS
+    if sim.Raman_model ~= 0
         rand_factor = randn(size(sponRS_prefactor{1})).*exp(1i*2*pi*rand(size(sponRS_prefactor{1})));
     end
 end
 
 % Spontaneous Raman scattering
-if sim.include_sponRS
+if sim.Raman_model ~= 0
     sponRS = ifft(abs(fft(sponRS_prefactor{1}.*rand_factor)).^2).*sponRS_prefactor{2}; clear randG
     
     switch gas.model
@@ -117,25 +92,30 @@ A_IP = expD.*A0_upsampling;
 if isempty(a5_1)
     a5_1_upsampling = N_op(       A0_upsampling,...
                            sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
-                           inverse_Aeff, dt/3);
+                           inverse_Aeff, dt/3,...
+                           eta);
 end
 a1 = expD.*a5_1_upsampling;
 a2 =                  N_op(       A_IP+a1*(sim.deltaZ/2),...
                            sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
-                           inverse_Aeff, dt/3);
+                           inverse_Aeff, dt/3,...
+                           eta);
 a3 =                  N_op(       A_IP+a2*(sim.deltaZ/2),...
                            sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
-                           inverse_Aeff, dt/3);
+                           inverse_Aeff, dt/3,...
+                           eta);
 a4 =                  N_op(expD.*(A_IP+a3*(sim.deltaZ)),...
                            sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
-                           inverse_Aeff, dt/3);
+                           inverse_Aeff, dt/3,...
+                           eta);
 
 A1 = expD.*(A_IP + (a1+2*a2+2*a3)*(sim.deltaZ/6)) + a4*(sim.deltaZ/6);
 
 % 3) Local error estimate
 a5 =                  N_op(       A1,...
                            sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
-                           inverse_Aeff, dt/3);
+                           inverse_Aeff, dt/3,...
+                           eta);
 err = sum(abs((a4-a5)*(sim.deltaZ/10)).^2,1);
 
 % 4) Stepsize control
@@ -164,13 +144,13 @@ function dAdz = N_op(A_w, sim, gas, gas_eqn,...
                      sponRS_Gamma,...
                      prefactor,...
                      num_modes,...
-                     inverse_Aeff, dt)
+                     inverse_Aeff, dt,...
+                     eta)
 %N_op Calculate dAdz
 
 A_t = fft(A_w);
 
-% Calculate large num_modes^4 Kerr, Ra, and Rb terms.
-% If not using the GPU, we will precompute Ra_mn and Rb_mn before the num_modes^4 sum
+% Calculate the large num_modes^4 sum term
 if sim.gpu_yes
     % If using the GPU, do the computation with fast CUDA code
     if sim.scalar % scalar fields
@@ -200,12 +180,12 @@ if sim.gpu_yes
     end
     Kerr = sum(Kerr,3);
 else
-    % If using the CPU, first precompute Ra_mn and Rb_mn.
+    % If using the CPU, first precompute SR_mn.
     if sim.Raman_model ~= 0
         midx34s_sub2ind = @(x)...
             cellfun(@(xx)...
                 feval(@(sub) sub2ind(num_modes*ones(1,2),sub{:}), num2cell(xx)),... % this extra "feval" is to get "xx", which is of the size 2x1, into the input arguments of "sub2ind", so transforming "xx" into a 2x1 cell, each containing an integer, and using {:} expansion is necessary
-            mat2cell(x,2,ones(1,size(x,2)))); % transform (2,num_nonzero34) midx34s into linear indices of a num_modes-by-num_modes matrix
+            mat2cell(x,2,ones(1,size(x,2)))); %#ok transform (2,num_nonzero34) midx34s into linear indices of a num_modes-by-num_modes matrix
             % What "midx34s_sub2ind" does (e.g.):
             %
             %   x = [1 3;
@@ -332,7 +312,7 @@ else
 end
 
 if sim.photoionization_model
-    [Ne,DNeDt] = photoionization_PPT_model(A_t, inverse_Aeff, gas.ionization_energy, sim.f0, dt, gas.Ng,...
+    [Ne,DNeDt] = photoionization_PPT_model(A_t, inverse_Aeff, gas.ionization_energy, sim.f0, dt, gas.Ng*eta,...
                                            gas_eqn.erfi_x, gas_eqn.erfi_y,...
                                            sim.ellipticity);
     
@@ -344,6 +324,6 @@ else
 end
 
 % Finalized
-dAdz = prefactor{1}.*nonlinear + nonlinear_photoionization;
+dAdz = eta*prefactor{1}.*nonlinear + nonlinear_photoionization;
 
 end

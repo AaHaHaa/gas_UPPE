@@ -17,6 +17,13 @@ current_folder = current_path(1:sep_pos(end));
 sim.cuda_dir_path = [current_folder '../cuda'];
 
 %% Run the pulse propagation
-foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, sim, gas);
+if isfield(gas,'pressure_in') && isfield(gas,'pressure_out')
+    foutput = UPPE_propagate_gradient_pressure(fiber, initial_condition, sim, gas);
+elseif isfield(gas,'pressure') % constant gas pressure
+    foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, sim, gas);
+else
+    error('UPPE_propagate:gasPressureError',...
+          '"gas" needs to have "pressure_in" and "pressure_out" for a gradient pressure or "pressure" only for a constrant pressure.');
+end
 
 end
