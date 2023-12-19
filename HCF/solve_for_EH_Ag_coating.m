@@ -17,7 +17,7 @@ use_gpu = false; % GPU
 
 gas_material = 'N2';
 
-pressure = 50; % atm
+pressure = 0; % atm
 temperature = 288.15; % 15 degree Celsius
 core_radius = 150e-6; % core radius; m
 

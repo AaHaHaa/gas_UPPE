@@ -12,13 +12,13 @@ clearvars; close all;
 
 addpath('helper functions','../gas absorption spectra/');
 
-use_gpu = false; % GPU
+use_gpu = false;%true; % GPU
 
-gas_material = 'air';
+gas_material = 'N2';
 
-pressure = 1; % atm
+pressure = 0; % atm
 temperature = 273.15 + 25; % 15 degree Celsius
-core_radius = 250e-6; % core radius; m
+core_radius = 150e-6; % core radius; m
 
 % Don't change "wavelength"!
 num_wavelength = 1e5;

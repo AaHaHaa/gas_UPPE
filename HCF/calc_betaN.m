@@ -9,15 +9,15 @@ addpath('../user_helpers');
 num_disp_orders = 3;
 use_gpu = true;
 
-load('info_AR_HC_PCF_air_30um_1atm_300nm.mat','beta','wavelength');
+load('info_no_coating_N2_300um_0atm.mat','beta','wavelength');
 
 c = 2.99792458e-4; % speed of ligth; m/ps
 
 Nf = size(beta,1);
 num_modes = size(beta,2);
 
-wavelength_min = 0.7; % um
-wavelength_max = 2; % um
+wavelength_min = 0.1; % um
+wavelength_max = 10; % um
 
 % Show the Stokes,pump,anti-Stokes phase matching condition 
 wavelength_pump = 1.03; % um
