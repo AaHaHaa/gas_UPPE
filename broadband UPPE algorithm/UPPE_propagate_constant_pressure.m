@@ -93,7 +93,7 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 %
 %           pulse_centering - 1(true) = center the pulse according to the time window, 0(false) = do not
 %                             The time delay will be stored in time_delay after running UPPE_propagate().
-%           num_photon_noise_per_band - a scalar; include photon noise (typically one photon per frequency band)
+%           num_photon_noise_per_bin - a scalar; include photon noise (typically one photon per spectral discretization bin)
 %           parallel_yes - show the simulation progress under the parallel "parfor".
 %                          The progress bar will be ignored within parfor.
 %           parallel_idx - the index of the session
@@ -248,7 +248,8 @@ end
 %% Set up the GPU details
 if sim.gpu_yes
     [sim.gpuDevice.Device,...
-     sim.cuda_SRSK,sim.cuda_num_operations,...
+     sim.cuda_SRSK,  sim.cuda_num_operations_SRSK,...
+     sim.cuda_sponRS,sim.cuda_num_operations_sponRS,...
      sim.cuda_MPA_psi_update] = setup_stepping_kernel(sim,gas_Nt,num_modes);
 end
 
@@ -313,9 +314,9 @@ end
 % scattering or scalar fields. In other situations, to compute Raman
 % correctly, include one photon per frequency band in the electric field of
 % each mode instead.
-sim.include_sponRS = (sim.Raman_model ~= 0 && sim.scalar);
+sim.include_sponRS = sim.Raman_model ~= 0;
 if sim.include_sponRS
-    sponRS_prefactor = spontaneous_Raman(Nt,dt,sim,fiber,gas,gas_eqn);
+    sponRS_prefactor = spontaneous_Raman(Nt,dt,sim,gas,gas_eqn);
 else
     sponRS_prefactor = []; % dummay variable due to no Raman
 end
@@ -332,7 +333,7 @@ end
 %% Work out the overlap tensor details
 [SK_info, SRa_info, SRb_info] = calc_SRSK(fiber,sim,num_spatial_modes);
 
-%% Include the shot noise: "sim.num_photon_noise_per_band" photons per mode
+%% Include the shot noise: "sim.num_photon_noise_per_bin" photons per mode
 initial_condition.fields = include_shot_noise(sim,real_omegas,Nt,time_window,initial_condition.fields);
 
 %% Setup the exact save points

@@ -61,36 +61,30 @@ if sim.gpu_yes
     Kerr = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
     Ra = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
     Rb = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
-    if sim.include_sponRS
-        rand_factor = randn(size(sponRS_prefactor{1}),'gpuArray').*exp(1i*2*pi*rand(size(sponRS_prefactor{1}),'gpuArray'));
+    if sim.include_sponRS % spontaneous Raman scattering
+        Ra_sponRS = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
+        Rb_sponRS = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
+        
+        A_sponRS = fft(sponRS_prefactor{1}.*sqrt(abs(randn(gas_eqn.Nt,num_modes,'gpuArray'))).*exp(1i*2*pi*rand(gas_eqn.Nt,num_modes,'gpuArray')));
+    else
+        Ra_sponRS = [];
+        Rb_sponRS = [];
+        A_sponRS = [];
     end
 else
     Kerr = complex(zeros(gas_eqn.Nt, num_modes));
     Ra = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
     Rb = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
-    if sim.include_sponRS
-        rand_factor = randn(size(sponRS_prefactor{1})).*exp(1i*2*pi*rand(size(sponRS_prefactor{1})));
+    if sim.include_sponRS % spontaneous Raman scattering
+        Ra_sponRS = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
+        Rb_sponRS = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
+        
+        A_sponRS = fft(sponRS_prefactor{1}.*sqrt(abs(randn(gas_eqn.Nt,num_modes))).*exp(1i*2*pi*rand(gas_eqn.Nt,num_modes)));
+    else
+        Ra_sponRS = [];
+        Rb_sponRS = [];
+        A_sponRS = [];
     end
-end
-
-% Spontaneous Raman scattering
-if sim.include_sponRS
-    sponRS = ifft(abs(fft(sponRS_prefactor{1}.*rand_factor)).^2).*sponRS_prefactor{2}; clear randG
-    
-    switch gas.model
-        case 0
-            sponRS = ifft(fft(sponRS),2*gas_eqn.Nt-1,1); % zero-padding for the acyclic convolution theorem to avoid time-domain aliasing
-            sponRS = cat(1,sponRS(end-(gas_eqn.m2-1):end,:,:),sponRS(1:gas_eqn.m,:,:)); % only the (2*Nt-1) points contain useful information; others are from the zero-padding result
-            
-            sponRS_Gamma = fft(Raw.*sponRS,2*gas_eqn.Nt-1,1);
-            sponRS_Gamma = sponRS_Gamma(gas_eqn.R_downsampling,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
-        case 1
-            sponRS = cat(1,sponRS(end-(gas_eqn.m2-1):end,:,:),sponRS(1:gas_eqn.n,:,:));
-            
-            sponRS_Gamma = fft(Raw.*sponRS,gas_eqn.Nt,1).*gas_eqn.phase_shift;
-    end
-else
-    sponRS_Gamma = [];
 end
 
 % Upsampling to avoid frequency aliasing
@@ -116,25 +110,60 @@ A_IP = expD.*A0_upsampling;
 % 2) Propagate through the nonlinearity
 if isempty(a5_1)
     a5_1_upsampling = N_op(       A0_upsampling,...
-                           sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
+                           sim, gas, gas_eqn,...
+                           SK_info, SRa_info, SRb_info,...
+                           Kerr, Ra, Rb,...
+                           Raw, Rbw,...
+                           A_sponRS, sponRS_prefactor,...
+                           Ra_sponRS, Rb_sponRS,...
+                           prefactor,...
+                           num_modes,...
                            inverse_Aeff, dt/3);
 end
 a1 = expD.*a5_1_upsampling;
 a2 =                  N_op(       A_IP+a1*(sim.deltaZ/2),...
-                           sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
+                           sim, gas, gas_eqn,...
+                           SK_info, SRa_info, SRb_info,...
+                           Kerr, Ra, Rb,...
+                           Raw, Rbw,...
+                           A_sponRS, sponRS_prefactor,...
+                           Ra_sponRS, Rb_sponRS,...
+                           prefactor,...
+                           num_modes,...
                            inverse_Aeff, dt/3);
 a3 =                  N_op(       A_IP+a2*(sim.deltaZ/2),...
-                           sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
+                           sim, gas, gas_eqn,...
+                           SK_info, SRa_info, SRb_info,...
+                           Kerr, Ra, Rb,...
+                           Raw, Rbw,...
+                           A_sponRS, sponRS_prefactor,...
+                           Ra_sponRS, Rb_sponRS,...
+                           prefactor,...
+                           num_modes,...
                            inverse_Aeff, dt/3);
 a4 =                  N_op(expD.*(A_IP+a3*(sim.deltaZ)),...
-                           sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
+                           sim, gas, gas_eqn,...
+                           SK_info, SRa_info, SRb_info,...
+                           Kerr, Ra, Rb,...
+                           Raw, Rbw,...
+                           A_sponRS, sponRS_prefactor,...
+                           Ra_sponRS, Rb_sponRS,...
+                           prefactor,...
+                           num_modes,...
                            inverse_Aeff, dt/3);
 
 A1 = expD.*(A_IP + (a1+2*a2+2*a3)*(sim.deltaZ/6)) + a4*(sim.deltaZ/6);
 
 % 3) Local error estimate
 a5 =                  N_op(       A1,...
-                           sim, gas, gas_eqn, SK_info, SRa_info, SRb_info, Kerr, Ra, Rb, Raw, Rbw, sponRS_Gamma, prefactor, num_modes,...
+                           sim, gas, gas_eqn,...
+                           SK_info, SRa_info, SRb_info,...
+                           Kerr, Ra, Rb,...
+                           Raw, Rbw,...
+                           A_sponRS, sponRS_prefactor,...
+                           Ra_sponRS, Rb_sponRS,...
+                           prefactor,...
+                           num_modes,...
                            inverse_Aeff, dt/3);
 err = sum(abs((a4-a5)*(sim.deltaZ/10)).^2,1);
 
@@ -157,11 +186,13 @@ a5 = cat(1,a5(1:gas_eqn.n,:),a5(end-(Nt-gas_eqn.n-1):end,:));
 
 end
 
-function dAdz = N_op(A_w, sim, gas, gas_eqn,...
+function dAdz = N_op(A_w,...
+                     sim, gas, gas_eqn,...
                      SK_info, SRa_info, SRb_info,...
                      Kerr, Ra, Rb,...
                      Raw, Rbw,...
-                     sponRS_Gamma,...
+                     A_sponRS, sponRS_prefactor,...
+                     Ra_sponRS, Rb_sponRS,...
                      prefactor,...
                      num_modes,...
                      inverse_Aeff, dt)
@@ -184,7 +215,17 @@ if sim.gpu_yes
                      sim.Raman_model~=0,...
                      int32(gas_eqn.Nt), 1,...
                      num_modes,...
-                     sim.cuda_num_operations);
+                     sim.cuda_num_operations_SRSK);
+        if sim.include_sponRS % spontaneous Raman scattering
+            Ra_sponRS = feval(sim.cuda_sponRS,...
+                              Ra_sponRS,...
+                              complex(A_t), A_sponRS,...
+                              SRa_info.SRa,...
+                              SRa_info.nonzero_midx1234s,...
+                              SRa_info.beginning_nonzero, SRa_info.ending_nonzero,...
+                              int32(gas_eqn.Nt), 1,...
+                              num_modes);
+        end
     else % polarized fields
         [Kerr,...
          Ra, Rb] = feval(sim.cuda_SRSK,...
@@ -196,7 +237,18 @@ if sim.gpu_yes
                          sim.Raman_model~=0, ~sim.scalar,...
                          int32(gas_eqn.Nt), 1,...
                          num_modes,...
-                         sim.cuda_num_operations);
+                         sim.cuda_num_operations_SRSK);
+        if sim.include_sponRS % spontaneous Raman scattering
+            [Ra_sponRS, Rb_sponRS] = feval(sim.cuda_sponRS,...
+                                           Ra_sponRS, Rb_sponRS,...
+                                           complex(A_t), A_sponRS,...
+                                           SRa_info.SRa, SRa_info.nonzero_midx1234s, SRa_info.beginning_nonzero, SRa_info.ending_nonzero,...
+                                           SRb_info.SRb, SRb_info.nonzero_midx1234s, SRb_info.beginning_nonzero, SRb_info.ending_nonzero,...
+                                           ~sim.scalar,...
+                                           int32(gas_eqn.Nt), 1,...
+                                           num_modes,...
+                                           sim.cuda_num_operations_sponRS);
+        end
     end
     Kerr = sum(Kerr,3);
 else
@@ -235,6 +287,16 @@ else
             SRb_nonzero_midx34s = midx34s_sub2ind(SRb_info.nonzero_midx34s); % the corresponding linear indices of the 3rd-dimensional "num_nonzero34" above
             Rb_mn = A_t(:, SRb_info.nonzero_midx34s(1,:)).*conj(A_t(:, SRb_info.nonzero_midx34s(2,:))); % (N,num_nonzero34)
         end
+        if sim.include_sponRS % spontaneous Raman scattering
+            Ra_mn_sponRS =      A_t(:, SRa_info.nonzero_midx34s(1,:)).*conj(A_sponRS(:, SRa_info.nonzero_midx34s(2,:))) +... % (N,num_nonzero34)
+                           A_sponRS(:, SRa_info.nonzero_midx34s(1,:)).*conj(     A_t(:, SRa_info.nonzero_midx34s(2,:))) +...
+                           A_sponRS(:, SRa_info.nonzero_midx34s(1,:)).*conj(A_sponRS(:, SRa_info.nonzero_midx34s(2,:)));
+            if ~sim.scalar
+                Rb_mn_sponRS =      A_t(:, SRb_info.nonzero_midx34s(1,:)).*conj(A_sponRS(:, SRb_info.nonzero_midx34s(2,:))) +... % (N,num_nonzero34)
+                               A_sponRS(:, SRb_info.nonzero_midx34s(1,:)).*conj(     A_t(:, SRb_info.nonzero_midx34s(2,:))) +...
+                               A_sponRS(:, SRb_info.nonzero_midx34s(1,:)).*conj(A_sponRS(:, SRb_info.nonzero_midx34s(2,:)));
+            end
+        end
     end
 
     % Then calculate Kerr, Ra, and Rb.
@@ -255,6 +317,9 @@ else
                 idx = midx34s_sub2ind([midx3;midx4]); % the linear indices
                 idx = arrayfun(@(i) find(SRa_nonzero_midx34s==i,1), idx); % the indices connecting to the 2nd-dimensional "num_nonzero34" of Ra_mn
                 Ra(:, midx1, midx2) = sum(permute(SRa_info.SRa(nz_midx),[2 1]).*Ra_mn(:, idx),2);
+                if sim.include_sponRS % spontaneous Raman scattering
+                    Ra_sponRS(:, midx1, midx2) = sum(permute(SRa_info.SRa(nz_midx),[2 1]).*Ra_mn_sponRS(:, idx),2);
+                end
             end
             % Rb
             if ~sim.scalar
@@ -266,14 +331,17 @@ else
                     idx = midx34s_sub2ind([midx3;midx4]); % the linear indices
                     idx = arrayfun(@(i) find(SRb_nonzero_midx34s==i,1), idx); % the indices connecting to the 3rd-dimensional "num_nonzero34" of Rb_mn
                     Rb(:, midx1, midx2) = sum(permute(SRb_info.SRb(nz_midx),[2 1]).*Rb_mn(:, idx),2);
+                    if sim.include_sponRS % spontaneous Raman scattering
+                        Rb_sponRS(:, midx1, midx2) = sum(permute(SRb_info.SRb(nz_midx),[2 1]).*Rb_mn_sponRS(:, idx),2);
+                    end
                 end
             end
         end
     end
     if sim.Raman_model ~= 0
-        clear Ra_mn;
+        clear Ra_mn Ra_mn_sponRS;
         if ~sim.scalar
-            clear Rb_mn;
+            clear Rb_mn Rb_mn_sponRS;
         end
     end
 end
@@ -293,12 +361,28 @@ if sim.Raman_model ~= 0
             RaAA = fft(Raw.*Ra_upsampling,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
             RaAA = RaAA(gas_eqn.R_downsampling,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
             
+            if sim.include_sponRS % spontaneous Raman scattering
+                Ra_sponRS = ifft(Ra_sponRS,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % zero-padding for the acyclic convolution theorem to avoid time-domain aliasing
+                Ra_sponRS = cat(1,Ra_sponRS(end-(gas_eqn.m2-1):end,:,:),Ra_sponRS(1:gas_eqn.m,:,:)); % only the acyclic_conv_stretch(Nt) points contain useful information; others are from the zero-padding result
+
+                RaAA_sponRS = fft(Raw.*Ra_sponRS.*sponRS_prefactor{2},gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
+                RaAA_sponRS = RaAA_sponRS(gas_eqn.R_downsampling,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
+            end
+            
             if ~sim.scalar % polarized fields with an anisotropic Raman contribution from rotational Raman
                 Rb_upsampling = ifft(Rb,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % zero-padding for the acyclic convolution theorem to avoid time-domain aliasing
                 Rb_upsampling = cat(1,Rb_upsampling(end-(gas_eqn.m2-1):end,:,:),Rb_upsampling(1:gas_eqn.m,:,:)); % only the acyclic_conv_stretch(Nt) points contain useful information; others are from the zero-padding result
 
                 RbAA = fft(Rbw.*Rb_upsampling,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
                 RbAA = RbAA(gas_eqn.R_downsampling,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
+                
+                if sim.include_sponRS % spontaneous Raman scattering
+                    Rb_sponRS = ifft(Rb_sponRS,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % zero-padding for the acyclic convolution theorem to avoid time-domain aliasing
+                    Rb_sponRS = cat(1,Rb_sponRS(end-(gas_eqn.m2-1):end,:,:),Rb_sponRS(1:gas_eqn.m,:,:)); % only the acyclic_conv_stretch(Nt) points contain useful information; others are from the zero-padding result
+
+                    RbAA_sponRS = fft(Rbw.*Rb_sponRS.*sponRS_prefactor{2},gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
+                    RbAA_sponRS = RbAA_sponRS(gas_eqn.R_downsampling,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
+                end
             end
         case 1
             Ra = ifft(Ra); % transform into the frequency domain for upsampling
@@ -306,23 +390,37 @@ if sim.Raman_model ~= 0
             
             RaAA = fft(Raw.*Ra_upsampling,gas_eqn.Nt,1).*gas_eqn.phase_shift;
             
+            if sim.include_sponRS % spontaneous Raman scattering
+                Ra_sponRS = ifft(Ra_sponRS); % transform into the frequency domain for upsampling
+                Ra_sponRS = cat(1,Ra_sponRS(end-(gas_eqn.m2-1):end,:,:),Ra_sponRS(1:gas_eqn.n,:,:));
+                
+                RaAA_sponRS = fft(Raw.*Ra_sponRS.*sponRS_prefactor{2},gas_eqn.Nt,1).*gas_eqn.phase_shift;
+            end
+            
             if ~sim.scalar % polarized fields with an anisotropic Raman contribution from rotational Raman
                 Rb = ifft(Rb); % transform into the frequency domain for upsampling
                 Rb_upsampling = cat(1,Rb(end-(gas_eqn.m2-1):end,:,:),Rb(1:gas_eqn.n,:,:));
 
                 RbAA = fft(Rbw.*Rb_upsampling,gas_eqn.Nt,1).*gas_eqn.phase_shift;
+                
+                if sim.include_sponRS % spontaneous Raman scattering
+                    Rb_sponRS = ifft(Rb_sponRS); % transform into the frequency domain for upsampling
+                    Rb_sponRS = cat(1,Rb_sponRS(end-(gas_eqn.m2-1):end,:,:),Rb_sponRS(1:gas_eqn.n,:,:));
+
+                    RbAA_sponRS = fft(Rbw.*Rb_sponRS.*sponRS_prefactor{2},gas_eqn.Nt,1).*gas_eqn.phase_shift;
+                end
             end
     end
     
     if sim.scalar
-        if sim.include_sponRS
-            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum(RaAA.*permute(A_t,[1 3 2]),3) + sponRS_Gamma.*A_t);
+        if sim.include_sponRS % spontaneous Raman scattering
+            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum((RaAA+RaAA_sponRS).*permute(A_t,[1 3 2]),3));
         else
             nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum(RaAA.*permute(A_t,[1 3 2]),3));
         end
     else % polarized fields with an anisotropic Raman contribution from rotational Raman
-        if sim.include_sponRS
-            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum((RaAA+RbAA).*permute(A_t,[1 3 2]),3) + sponRS_Gamma.*A_t);
+        if sim.include_sponRS % spontaneous Raman scattering
+            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum((RaAA+RbAA+RaAA_sponRS+RbAA_sponRS).*permute(A_t,[1 3 2]),3));
         else
             nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum((RaAA+RbAA).*permute(A_t,[1 3 2]),3));
         end

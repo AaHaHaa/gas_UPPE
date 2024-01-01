@@ -120,7 +120,7 @@ function [fiber,sim] = load_default_UPPE_propagate( input_fiber,input_sim )
 %
 %           pulse_centering - 1(true) = center the pulse according to the time window, 0(false) = do not
 %                             The time delay will be stored in time_delay after running UPPE_propagate().
-%           num_photon_noise_per_band - a scalar; include photon noise (typically one photon per frequency band)
+%           num_photon_noise_per_bin - a scalar; include photon noise (typically one photon per spectral discretization bin)
 %           parallel_yes - show the simulation progress under the parallel "parfor".
 %                          The progress bar will be ignored within parfor.
 %           parallel_idx - the index of the session
@@ -228,7 +228,7 @@ default_sim.photoionization_model = 0;
 
 % Others
 default_sim.pulse_centering = true; % center the pulse according to the time window
-default_sim.num_photon_noise_per_band = 1;
+default_sim.num_photon_noise_per_bin = 1;
 default_sim.gpuDevice.Index = 1; % the gpuDevice to use
 default_sim.progress_bar = true;
 default_sim.progress_bar_name = '';
