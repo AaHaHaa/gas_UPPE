@@ -308,17 +308,15 @@ end
                                                    gas_Nt,gas_dt,upsampling_zeros);
 
 %% Include spontaneous Raman scattering
-% Current model of spontaneous Raman scattering assumes only isotropic
-% Raman scattering or in the case of conv(R,|A|^2) for the Raman index
-% modulation. This form can be achieved when there is only isotropic Raman
-% scattering or scalar fields. In other situations, to compute Raman
-% correctly, include one photon per frequency band in the electric field of
-% each mode instead.
 sim.include_sponRS = sim.Raman_model ~= 0;
 if sim.include_sponRS
     sponRS_prefactor = spontaneous_Raman(Nt,dt,sim,gas,gas_eqn);
+    Raw_sponRS = Raw; Raw_sponRS = 1i*imag(Raw_sponRS); Raw_sponRS(gas_eqn.m2+1:end) = -Raw_sponRS(gas_eqn.m2+1:end);
+    Rbw_sponRS = Raw; Rbw_sponRS = 1i*imag(Rbw_sponRS); Rbw_sponRS(gas_eqn.m2+1:end) = -Rbw_sponRS(gas_eqn.m2+1:end);
 else
     sponRS_prefactor = []; % dummay variable due to no Raman
+    Raw_sponRS = [];
+    Rbw_sponRS = [];
 end
 
 %% Finalize a few parameters for MPA computation
@@ -362,6 +360,7 @@ run_start = tic;
                                                                     D_op, D_op_upsampling,...
                                                                     SK_info, SRa_info, SRb_info,...
                                                                     Raw, Rbw,...
+                                                                    Raw_sponRS, Rbw_sponRS,...
                                                                     prefactor, sponRS_prefactor);
 % -------------------------------------------------------------------------
 % Just to get an accurate timing, wait before recording the time

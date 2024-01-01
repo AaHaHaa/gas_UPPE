@@ -3,6 +3,7 @@ function [A1, dummy_a5_1,...
                                                               sim, gas, gas_eqn,...
                                                               SK_info, SRa_info, SRb_info,...
                                                               Raw, Rbw,...
+                                                              Raw_sponRS, Rbw_sponRS,...
                                                               D_op,...
                                                               prefactor, sponRS_prefactor,...
                                                               dummy_dt, dummy_inverse_Aeff,...
@@ -294,7 +295,7 @@ for n_it = 1:sim.MPA.n_tot_max
                     Ra_sponRS = ifft(Ra_sponRS,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % zero-padding for the acyclic convolution theorem to avoid time-domain aliasing
                     Ra_sponRS = cat(1,Ra_sponRS(end-(gas_eqn.m2-1):end,:,:,:),Ra_sponRS(1:gas_eqn.m,:,:,:)); % only the (2*Nt-1) points contain useful information; others are from the zero-padding result
 
-                    RaAA_sponRS = fft(Raw.*Ra_sponRS.*sponRS_prefactor{2},gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
+                    RaAA_sponRS = fft(Raw_sponRS.*Ra_sponRS.*sponRS_prefactor{2},gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
                     RaAA_sponRS = RaAA_sponRS(gas_eqn.R_downsampling,:,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
                 end
                 
@@ -309,7 +310,7 @@ for n_it = 1:sim.MPA.n_tot_max
                         Rb_sponRS = ifft(Rb_sponRS,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % zero-padding for the acyclic convolution theorem to avoid time-domain aliasing
                         Rb_sponRS = cat(1,Rb_sponRS(end-(gas_eqn.m2-1):end,:,:,:),Rb_sponRS(1:gas_eqn.m,:,:,:)); % only the (2*Nt-1) points contain useful information; others are from the zero-padding result
 
-                        RbAA_sponRS = fft(Rbw.*Rb_sponRS.*sponRS_prefactor{2},gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
+                        RbAA_sponRS = fft(Rbw_sponRS.*Rb_sponRS.*sponRS_prefactor{2},gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
                         RbAA_sponRS = RbAA_sponRS(gas_eqn.R_downsampling,:,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
                     end
                 end
@@ -323,7 +324,7 @@ for n_it = 1:sim.MPA.n_tot_max
                     Ra_sponRS = ifft(Ra_sponRS); % transform into the frequency domain for upsampling
                     Ra_sponRS = cat(1,Ra_sponRS(end-(gas_eqn.m2-1):end,:,:,:),Ra_sponRS(1:gas_eqn.n,:,:,:));
 
-                    RaAA_sponRS = fft(Raw.*Ra_sponRS.*sponRS_prefactor{2},gas_eqn.Nt,1).*gas_eqn.phase_shift;
+                    RaAA_sponRS = fft(Raw_sponRS.*Ra_sponRS.*sponRS_prefactor{2},gas_eqn.Nt,1).*gas_eqn.phase_shift;
                 end
                 
                 if ~sim.scalar % polarized fields with an anisotropic Raman contribution from rotational Raman
@@ -336,7 +337,7 @@ for n_it = 1:sim.MPA.n_tot_max
                         Rb_sponRS = ifft(Rb_sponRS); % transform into the frequency domain for upsampling
                         Rb_sponRS = cat(1,Rb_sponRS(end-(gas_eqn.m2-1):end,:,:,:),Rb_sponRS(1:gas_eqn.n,:,:,:));
 
-                        RbAA_sponRS = fft(Rbw.*Rb_sponRS.*sponRS_prefactor{2},gas_eqn.Nt,1).*gas_eqn.phase_shift;
+                        RbAA_sponRS = fft(Rbw_sponRS.*Rb_sponRS.*sponRS_prefactor{2},gas_eqn.Nt,1).*gas_eqn.phase_shift;
                     end
                 end
         end
