@@ -207,6 +207,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
             delta_permittivity(:,:,:,1) = calc_permittivity(sim,gas,gas_eqn,last_A,Nt);
         end
         if sim.photoionization_model ~= 0
+            A_out_ii = fft(last_A);
             relative_Ne(:,:,1) = calc_Ne(A_out_ii, dt, fiber.SR(1), gas, gas_eqn, sim);
         end
     end
