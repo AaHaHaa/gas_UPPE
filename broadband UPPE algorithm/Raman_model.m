@@ -37,7 +37,7 @@ switch gas.gas_material
         % calibration factor
         % To match with the experiments of some papers
         rot.polarizability_calibration = 1.2;
-        vib.polarizability_calibration = 1.1; % 1.05 is to fit the vibrational Raman gain from William K. Bischel and Mark J. Dyer's "Wavelength dependence of the absolute Raman gain coefficient for the Q(1) transition in H2"
+        vib.polarizability_calibration = 1.05; % 1.05 is to fit the vibrational Raman gain from William K. Bischel and Mark J. Dyer's "Wavelength dependence of the absolute Raman gain coefficient for the Q(1) transition in H2"
         % Apply the calibration
         rot.gamma = rot.gamma*rot.polarizability_calibration;
         vib.Dalpha = vib.Dalpha*vib.polarizability_calibration;
