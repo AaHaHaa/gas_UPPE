@@ -413,12 +413,11 @@ power.backward = permute(trapz(f,ASE.backward,1),[3 2 1])*1e3;
 
 if length(midx) == 1
     fig(1) = figure('Name','Cavity: ASE power');
-    h  = plot(saved_z,power.forward(:,midx)); hold on;
-    h2 = plot(saved_z,power.backward(:,midx));
+    h  = plot(saved_z,power.forward(:,midx),'linewidth',2,'Color','b'); hold on;
+    h2 = plot(saved_z,power.backward(:,midx),'linewidth',2,'Color','r');
     xlim([saved_z(1) saved_z(end)]);
     xlabel('Propagation length (m)'); ylabel('ASE power (mW)');
-    title('ASE power within the cavity');
-    set(h,'linewidth',2); set(h2,'linewidth',2); set(gca,'fontsize',20);
+    set(gca,'fontsize',20);
     for i = 1:length(splice_z)
         h = plot([splice_z(i);splice_z(i)],[min([power.forward(:,midx);power.backward(:,midx)]);max([power.forward(:,midx);power.backward(:,midx)])]);
         set(h,'linewidth',2,'linestyle','--','color','black','marker','none');
@@ -458,12 +457,11 @@ if length(midx) == 1
 else
     fig = figure('Name','Cavity: ASE power');
     total_power.forward = sum(power.forward,2); total_power.backward = sum(power.backward,2);
-    h  = plot(saved_z,total_energy_forward); hold on;
-    h2 = plot(saved_z,total_energy_backward);
+    h  = plot(saved_z,total_power.forward,'linewidth',2,'Color','b'); hold on;
+    h2 = plot(saved_z,total_power.backward,'linewidth',2,'Color','r');
     xlim([saved_z(1) saved_z(end)]);
     xlabel('Propagation length (m)'); ylabel('ASE power (mW)');
-    title('ASE power within the cavity');
-    set(h,'linewidth',2); set(h2,'linewidth',2); set(gca,'fontsize',20);
+    set(gca,'fontsize',20);
     hold on;
     for i = 1:length(splice_z)
         h = plot([splice_z(i);splice_z(i)],[min([total_power.forward;total_power.backward]);max([total_power.forward;total_power.backward])]);
@@ -617,7 +615,7 @@ for i = 1:save_point
     shading interp; colormap(jet);
     colorbar('location','south','Color','[1 1 1]');
     %cb = colorbar('location','south','Color','[1 1 1]');
-    %cb.Label.String = 'Intensity (nJ/nm)'; % the unit of the spectrogram colorbar
+    %cb.Label.String = 'PSD (nJ/nm)'; % the unit of the spectrogram colorbar
     xlabel('Time (ps)');
     ylabel('Wavelength (nm)');
     title('Spectrogram');
@@ -627,7 +625,7 @@ for i = 1:save_point
     yyaxis left
     h1_1 = plot(t,intensity(:,1,i)); % intensity (W)
     ylim([min_intensity max_intensity]);
-    ylabel('Intensity (W)');
+    ylabel('Power (W)');
     yyaxis right
     h1_2 = plot(t(2:end-1),pulse_inst_freq(:,1,i)); % instantaneous frequency (THz)
     ylabel('Inst. freq. (THz)');
@@ -646,7 +644,7 @@ for i = 1:save_point
     else
         ylim([min(wavelength) max(wavelength)]);
     end
-    xlabel(['Intensity (' spectrum_figure_unit ')']);
+    xlabel(['PSD (' spectrum_figure_unit ')']);
     set(h2,'linewidth',2); set(gca,'fontsize',14);
     title('Spectrum');
     
