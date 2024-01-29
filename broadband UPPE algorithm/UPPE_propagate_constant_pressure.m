@@ -311,8 +311,8 @@ end
 sim.include_sponRS = sim.Raman_model ~= 0;
 if sim.include_sponRS
     sponRS_prefactor = spontaneous_Raman(Nt,dt,sim,gas,gas_eqn);
-    Raw_sponRS = Raw; Raw_sponRS = 1i*imag(Raw_sponRS); Raw_sponRS(gas_eqn.m2+1:end) = -Raw_sponRS(gas_eqn.m2+1:end);
-    Rbw_sponRS = Raw; Rbw_sponRS = 1i*imag(Rbw_sponRS); Rbw_sponRS(gas_eqn.m2+1:end) = -Rbw_sponRS(gas_eqn.m2+1:end);
+    Raw_sponRS = Raw; Raw_sponRS = 1i*imag(Raw_sponRS);
+    Rbw_sponRS = Raw; Rbw_sponRS = 1i*imag(Rbw_sponRS);
 else
     sponRS_prefactor = []; % dummay variable due to no Raman
     Raw_sponRS = [];
