@@ -137,8 +137,8 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
                                                      gas_pressure,eta,...
                                                      time_window,...
                                                      omegas,wavelength);
-        Raw_sponRS = Raw; Raw_sponRS = 1i*imag(Raw_sponRS);
-        Rbw_sponRS = Raw; Rbw_sponRS = 1i*imag(Rbw_sponRS);
+        Raw_sponRS = Raw;
+        Rbw_sponRS = Raw;
     else
         Raw_sponRS = [];
         Rbw_sponRS = [];
