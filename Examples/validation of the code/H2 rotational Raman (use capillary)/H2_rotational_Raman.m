@@ -42,7 +42,7 @@ gas.H2.V.preR = zeros(size(gas.H2.V.preR)); % no vib
 
 %% Initial condition and Propagate
 tfwhm = 12e3; % ps
-total_energy = 2.5e3; % nJ
+total_energy = 1000; % nJ
 pump_wavelength = 1540e-9; % m
 freq_shift = c/pump_wavelength - sim.f0;
 input_field = build_MMgaussian(tfwhm,time_window,total_energy,1,Nt,{'ifft',freq_shift});
