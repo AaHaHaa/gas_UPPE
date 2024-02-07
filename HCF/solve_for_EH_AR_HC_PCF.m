@@ -15,13 +15,13 @@ addpath('helper functions','../gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-gas_material = 'air';
+gas_material = 'H2';
 
-pressure = 1; % atm
+pressure = 30; % atm
 temperature = 288.15; % 15 degree Celsius
-core_radius = 15e-6; % core radius; m
+core_radius = 33e-6; % core radius; m
 
-delta = 300e-9; % m; revolver-wall thickness
+delta = 310e-9; % m; revolver-wall thickness
 f_FEM = 2e-3; % overall fitting factor that allows us to adjust the capillary spectral loss shape to match the levels found in COMSOL
 
 % Wavelength sampling for the propagation constant and the loss

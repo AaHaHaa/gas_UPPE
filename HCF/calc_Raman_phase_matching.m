@@ -5,12 +5,12 @@
 % Raman process in the second pulse. This code plots out the wave vectors
 % for analysis.
 
-%clearvars; close all;
+clearvars; close all;
 
 num_disp_orders = 3;
 use_gpu = false;%true;
 
-load('info_AR_HC_PCF_H2_30um_1atm_300nm.mat');
+load('info_AR_HC_PCF_H2_60um_30atm_310nm.mat');
 gas_material = 'H2';
 
 c = 2.99792458e-4; % speed of ligth; m/ps
