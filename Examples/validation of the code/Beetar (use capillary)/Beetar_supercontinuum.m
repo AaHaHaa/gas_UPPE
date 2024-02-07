@@ -21,6 +21,7 @@ num_save = 50;
 fiber.L0 = 3.5; % propagation length
 sim.save_period = fiber.L0/num_save;
 %sim.midx = 1:3;
+sim.scalar = false;
 
 f = sim.f0+(-Nt/2:Nt/2-1)'/time_window; % THz
 t = (-Nt/2:Nt/2-1)'*dt; % ps
