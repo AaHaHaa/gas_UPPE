@@ -1,7 +1,7 @@
 function sponRS = spontaneous_Raman(Nt,dt,sim,gas,gas_eqn)
 %SPONTANEOUS_RAMAN It computes the spontaneous Raman term.
 % Spontaneous Raman scattering is equivalent to scattering with a field
-% with one photon per frequency band.
+% with one photon per frequency bin.
 
 h = 6.62607015e-34; % J*s
 hbar = h/(2*pi); % J*s
