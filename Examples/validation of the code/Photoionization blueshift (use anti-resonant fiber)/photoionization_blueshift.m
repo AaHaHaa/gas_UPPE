@@ -45,7 +45,7 @@ gas.xy_sampling = 101;
 
 %% Initial condition and Propagate
 tfwhm = 0.02; % ps
-total_energy = 3.2e3; % nJ
+total_energy = 5.1e3; % nJ
 pump_wavelength = 800e-9; % m
 freq_shift = c/pump_wavelength - sim.f0;
 initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,1,Nt,{'ifft',freq_shift});
