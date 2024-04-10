@@ -61,19 +61,11 @@ small_deltaZ = sim.deltaZ/sim.MPA.M; % the step size between each parallelizatio
 % Spontaneous Raman scattering
 if sim.include_sponRS
     if sim.gpu_yes
-        Ra_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes, 'gpuArray'));
-        Rb_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes, 'gpuArray'));
-
         A_sponRS = fft(sponRS_prefactor{1}.*sqrt(abs(randn(gas_eqn.Nt,sim.MPA.M+1,num_modes,'gpuArray'))).*exp(1i*2*pi*rand(gas_eqn.Nt,sim.MPA.M+1,num_modes,'gpuArray')));
     else
-        Ra_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes));
-        Rb_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes));
-
         A_sponRS = fft(sponRS_prefactor{1}.*sqrt(abs(randn(gas_eqn.Nt,sim.MPA.M+1,num_modes))).*exp(1i*2*pi*rand(gas_eqn.Nt,sim.MPA.M+1,num_modes)));
     end
 else
-    Ra_sponRS = [];
-    Rb_sponRS = [];
     A_sponRS = [];
 end
 
@@ -117,6 +109,19 @@ for n_it = 1:sim.MPA.n_tot_max
         Kerr = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes));
         Ra = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes));
         Rb = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes));
+    end
+    % Spontaneous Raman scattering
+    if sim.include_sponRS
+        if sim.gpu_yes
+            Ra_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes, 'gpuArray'));
+            Rb_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes, 'gpuArray'));
+        else
+            Ra_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes));
+            Rb_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes));
+        end
+    else
+        Ra_sponRS = [];
+        Rb_sponRS = [];
     end
 
     % Calculate large num_modes^4 Kerr, Ra, and Rb terms.
@@ -241,7 +246,11 @@ for n_it = 1:sim.MPA.n_tot_max
                     idx = arrayfun(@(i) find(SRa_nonzero_midx34s==i,1), idx); % the indices connecting to the 3rd-dimensional "num_nonzero34" of Ra_mn
                     Ra(:, :, midx1, midx2) = sum(permute(SRa_info.SRa(nz_midx),[3 2 1]).*Ra_mn(:, :, idx),3);
                     if sim.include_sponRS % spontaneous Raman scattering
+                        try
                         Ra_sponRS(:, :, midx1, midx2) = sum(permute(SRa_info.SRa(nz_midx),[3 2 1]).*Ra_mn_sponRS(:, :, idx),3);
+                        catch
+                            disp('');
+                        end
                     end
                 end
                 % Rb
