@@ -302,6 +302,10 @@ for midx1 = 2:length(chosen_midx)
     mode_profiles(:,midx1,:,:) = mode_profiles(:,midx1,:,:)./norm;
 end
 
+%% Mode-field diameter
+SR = calc_SR_tensors(mode_profiles,r,dr,dtheta,struct('gpu_yes',use_gpu),'./');
+fprintf('MFD=%4.2f um\n',sqrt(1/SR/pi)*2*1e6);
+
 %% Save data
 r = squeeze(r);
 theta = squeeze(theta);
