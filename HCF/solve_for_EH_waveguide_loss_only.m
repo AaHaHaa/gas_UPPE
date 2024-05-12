@@ -85,11 +85,20 @@ switch gas_material
         % pressure-induced absorption
         Raman_absorption = read_absorption(gas_material,wavelength*1e-9,(pressure/temperature)/(pressure0/temperature0));
         n_gas = n_gas + 1i*Raman_absorption./(2*pi./(wavelength*1e-9));
-    case {'Ar','Xe','Kr','Ne','He'}
+    case {'Ar','Ne','He'}
         n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
         
         permittivity_r = n_from_Sellmeier(wavelength*1e-3).^2;
         n_gas = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % refractive index of the gas
+    case {'Xe','Kr'}
+        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
+        
+        permittivity_r = n_from_Sellmeier(wavelength*1e-3).^2;
+        n_gas = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % refractive index of the gas
+        
+        permittivity_r = n_from_Sellmeier(0.15).^2;
+        n_gas_150 = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % Sellmeier is valid only above ~150nm
+        n_gas(wavelength<150) = n_gas_150;
     case 'CH4'
         n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
         
