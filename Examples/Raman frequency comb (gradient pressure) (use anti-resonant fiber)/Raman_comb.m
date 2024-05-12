@@ -4,7 +4,7 @@
 
 close all; clearvars;
 
-addpath('../../../user_helpers','../../../broadband UPPE algorithm');
+addpath('../../user_helpers','../../broadband UPPE algorithm');
 
 %% Setup parameters
 c = 299792458*1e-12; % m/ps
@@ -14,11 +14,10 @@ Nt = 2^19;
 
 sim.f0 = f0;
 %sim.progress_bar = false;
-sim.gpuDevice.Index = 2;
 sim.progress_bar_name = 'N2';
 
 num_save = 1;
-fiber.L0 = 10; % propagation length
+fiber.L0 = 10; % m; propagation length
 sim.save_period = fiber.L0/num_save;
 
 f = sim.f0+(-Nt/2:Nt/2-1)'/time_window; % THz

@@ -37,7 +37,7 @@ pump_pulse = gaussian_spectral_filter(prop_output, sim.f0, pump_wavelength*1e9, 
 calc_spectrogram(t,f,pump_pulse.fields(:,:,end)); title('Pump''s spectrogram');
 calc_spectrogram(t,f,Stokes_pulse.fields(:,:,end)); title('Stokes''s spectrogram');
 
-%% chirped Stokes pulse
+%% Chirped Stokes pulse
 figure;
 plot(t,abs(Stokes_pulse.rejected_fields(:,:,end)).^2/1e9,'linewidth',2,'Color','k');
 hold on;

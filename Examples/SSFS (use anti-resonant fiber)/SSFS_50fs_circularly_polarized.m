@@ -1,8 +1,11 @@
-% This code simulates soliton self-frequency shift (SSFS) in a 30-um-core
-% anti-resonant hollow-core fiber filled with 15-bar H2.
+% This code tends to simulate soliton self-frequency shift (SSFS) in a 
+% 30-um-core anti-resonant hollow-core fiber filled with 15-bar H2.
 % The input pulse is 50 fs at 1030 nm.
 % The simulation includes polarization modes where the input pulse is
-% linearly polarized.
+% circularly polarized.
+%
+% Compared to linearly polarized simulations in this folder, SSFS doesn't
+% happen because strong polarization coupling distorts the SSFS process.
 
 close all;  clearvars;
 
@@ -17,10 +20,10 @@ Nt = 2^14;
 sim.f0 = f0;
 %sim.progress_bar = false;
 sim.scalar = false; % run with polarized fields
-sim.ellipticity = 0; % linearly polarized for 0 and circularly polarized for 1
+sim.ellipticity = 1; % linearly polarized for 0 and circularly polarized for 1
 
 num_save = 100;
-fiber.L0 = 2; % propagation length
+fiber.L0 = 0.2; % propagation length
 sim.save_period = fiber.L0/num_save;
 
 f = sim.f0+(-Nt/2:Nt/2-1)'/time_window; % THz
@@ -30,7 +33,7 @@ lambda = c./f*1e9; % nm
 %% Gas info
 [fiber,sim] = load_default_UPPE_propagate(fiber,sim);
 
-gas.core_radius = 15e-6; % um
+gas.core_radius = 15e-6; % m
 gas.temperature = 288; % K
 gas.pressure = 15*1.01325e5; % Pa
 gas.wavelength_order = 6;
@@ -53,12 +56,5 @@ initial_condition.fields = initial_condition.fields.*sqrt([1,1e-2]);
 
 prop_output = UPPE_propagate(fiber,initial_condition,sim,gas);
 
-% This is used to find the pump pulse time delay without any nonlinearity
-% to correctly demonstrate how the output pulses are delayed w.r.t. the
-% pump pulse.
-fiber_calc_pulse_speed = fiber;
-fiber_calc_pulse_speed.SR = 1e-30;
-output_calc_pulse_speed = UPPE_propagate(fiber_calc_pulse_speed,initial_condition,sim,gas);
-
 %% Save
-save('SSFS_50fs_pL_H2.mat');
+save('SSFS_50fs_pC_H2.mat');

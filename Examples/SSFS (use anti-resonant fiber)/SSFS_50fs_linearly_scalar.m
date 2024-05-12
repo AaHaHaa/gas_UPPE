@@ -29,7 +29,7 @@ lambda = c./f*1e9; % nm
 %% Gas info
 [fiber,sim] = load_default_UPPE_propagate(fiber,sim);
 
-gas.core_radius = 15e-6; % um
+gas.core_radius = 15e-6; % m
 gas.temperature = 288; % K
 gas.pressure = 15*1.01325e5; % Pa
 gas.wavelength_order = 6;
@@ -50,13 +50,6 @@ freq_shift = c/pump_wavelength - sim.f0;
 initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,1,Nt,{'ifft',freq_shift});
 
 prop_output = UPPE_propagate(fiber,initial_condition,sim,gas);
-
-% This is used to find the pump pulse time delay without any nonlinearity
-% to correctly demonstrate how the output pulses are delayed w.r.t. the
-% pump pulse.
-fiber_calc_pulse_speed = fiber;
-fiber_calc_pulse_speed.SR = 1e-30;
-output_calc_pulse_speed = UPPE_propagate(fiber_calc_pulse_speed,initial_condition,sim,gas);
 
 %% Save
 save('SSFS_50fs_sL_H2.mat');

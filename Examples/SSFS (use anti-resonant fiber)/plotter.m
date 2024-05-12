@@ -25,7 +25,7 @@ spectrum = abs(fftshift(ifft(prop_output.fields),1)).^2;
 spectrum = squeeze(spectrum(:,2,:)).';
 log_spectrum = 10*log10(spectrum); log_spectrum2 = log_spectrum - max(log_spectrum(:));
 
-%% Spectra evolution of the first polarization mode
+%% Spectral evolution of the first polarization mode
 figure;
 pcolor(lambda,prop_output.z,log_spectrum_wavelength1); shading interp;
 cmap = whitejet_lower; colormap(cmap); caxis([-30,0]);
@@ -36,7 +36,7 @@ xlabel('Wavelength (nm)');
 ylabel('Propagation distance (m)');
 title('Spectral evolution (pol 1)');
 
-%% Spectra evolution of the second polarization mode
+%% Spectral evolution of the second polarization mode
 figure;
 pcolor(lambda,prop_output.z,log_spectrum_wavelength2); shading interp;
 cmap = whitejet_lower; colormap(cmap); caxis([-30,0]);

@@ -21,7 +21,7 @@ Nt = 2^11;
 sim.f0 = f0;
 %sim.progress_bar = false;
 sim.progress_bar_name = 'DW';
-sim.midx = 1:4;
+sim.midx = 1:4; % consider four spatial modes, EH11,EH21,EH31,EH41
 
 num_save = 30;
 fiber.L0 = 0.2; % propagation length
