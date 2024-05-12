@@ -14,3 +14,7 @@ The structure of this code is developed similar to our solid-core counterpart (h
 
 I'm Yi-Hao Chen, the author of the code and from Frank Wise's group at Cornell Applied Physics.  
 Feel free to ask questions here or by sending me an email (email address is in my paper).
+
+## Important notice:<br>
+* 5/11/2024:<br>
+I added some examples. APL Photonics data files are updated so that they can be run correctly.
