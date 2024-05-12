@@ -17,13 +17,25 @@ plot(t_insert,abs(transform_limited_field).^2/1e9,'linewidth',2,'Color','b');
 hold on;
 plot(t,abs(dechirped_field).^2/1e9,'linewidth',2,'Color','r');
 hold off;
-xlim([-0.4,0.8]);
-ylim([0,8]);
+xlim([-0.8,2]);
+ylim([0,2]);
 xlabel('Time (ps)');
 ylabel('Power (GW)');
 set(gca,'fontsize',25);
 legend('TL','D');
 %print(gcf,'dechirped.pdf','-dpdf');
+
+%% Spectrogram
+% Spectrogram of the pump shows that its center disappears and is
+% transferred to the Stokes pulse such that Stokes pulse exhibits pump's
+% SPM central segment, which further makes the Stokes pulse dechirpable to
+% a duration shorter than pump's initial temporal duration.
+
+% Filter
+pump_pulse = gaussian_spectral_filter(prop_output, sim.f0, pump_wavelength*1e9, 100, 5);
+
+calc_spectrogram(t,f,pump_pulse.fields(:,:,end)); title('Pump''s spectrogram');
+calc_spectrogram(t,f,Stokes_pulse.fields(:,:,end)); title('Stokes''s spectrogram');
 
 %% chirped Stokes pulse
 figure;
@@ -31,8 +43,8 @@ plot(t,abs(Stokes_pulse.rejected_fields(:,:,end)).^2/1e9,'linewidth',2,'Color','
 hold on;
 plot(t,abs(Stokes_pulse.fields(:,:,end)).^2/1e9,'linewidth',2,'Color','r');
 hold off;
-xlim([-2,2]);
-ylim([0,1.8]);
+xlim([-4,4]);
+ylim([0,0.5]);
 xlabel('Time (ps)');
 ylabel('Power (GW)');
 set(gca,'fontsize',25);

@@ -1,3 +1,7 @@
+% This code demonstrates the Raman-enhanced SPM and its corresponding 
+% pulse-compression effect to the Stokes pulse.
+% The Stokes pulse is shorter than the pump pulse after dechirping.
+
 close all; clearvars;
 
 addpath('../../../user_helpers','../../../broadband UPPE algorithm');
@@ -5,7 +9,7 @@ addpath('../../../user_helpers','../../../broadband UPPE algorithm');
 %% Setup parameters
 c = 299792458*1e-12; % m/ps
 wavelength_range = [0.5,3]*1e-6; % m
-Nt = 2^12;
+Nt = 2^13;
 [f0,f_range,time_window,dt] = find_tw_f0(c./wavelength_range,Nt);
 
 sim.f0 = f0;
@@ -36,9 +40,9 @@ gas.xy_sampling = 101;
 [fiber,sim,gas] = gas_info(fiber,sim,gas,lambda*1e-9);
 
 %% Initial condition and Propagate
-tfwhm = 1;
+tfwhm = 3; % ps
 
-total_energy = 2000e3; % nJ
+total_energy = 2e6; % nJ
 pump_wavelength = 1030e-9; % m
 freq_shift = c/pump_wavelength - sim.f0;
 initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,1,Nt,{'ifft',freq_shift});
