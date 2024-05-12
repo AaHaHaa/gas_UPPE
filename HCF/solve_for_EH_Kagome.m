@@ -13,17 +13,17 @@ addpath('helper functions','../gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-gas_material = 'air';
+gas_material = 'Xe';
 
-pressure = 100; % atm
+pressure = 2.7; % atm
 temperature = 288.15; % 15 degree Celsius
-core_radius = 5e-6; % core radius; m
+core_radius = 13.5e-6; % core radius; m
 
 delta = 1000e-9; % m; wall thickness
 
 % Wavelength sampling for the propagation constant and the loss
 num_wavelength = 1e5;
-wavelength_range = [200,50e3]; % nm
+wavelength_range = [100,50e3]; % nm
 c = 299792.458; % nm/ps
 f = linspace(c/wavelength_range(1),c/wavelength_range(2),num_wavelength)'; % THz
 wavelength = c./f; % nm
@@ -170,12 +170,10 @@ end
 
 s = 0.065;
 a_AP = 1.075*core_radius; % area-preserving core radius
-a_c = a_AP./(1+s*wavelength.^2/a_AP/delta);
+a_c = a_AP./(1+s*(wavelength*1e-9).^2/a_AP/delta);
 
-kappa = unm./a;
-sigma = sqrt(k0.^2.*(n_out.^2-n_gas.^2) + kappa.^2);
-
-ki = (1i*ZdYd.*nm(1,:)./k0./a_c-1).*unm./(1i*ZdYd./k0./a_c.*(nm(1,:)-1)-1)./a_c;
+% the below simplest ki removes all the loss
+ki = complex(unm./a_c);
 gamma = sqrt((k0.*n_gas).^2 - ki.^2);
 
 % Check validity of the Marcatili's equation
@@ -351,3 +349,11 @@ plot_mode_profiles = cat(4,mode_profiles,mode_profiles(:,:,:,1));
 for midx = 1:length(chosen_midx)
     figure; polarPcolor(r',plot_theta'*180/pi,squeeze(real(plot_mode_profiles(ceil(target_wavelength_sampling/2),midx,:,:)))); colormap(jet);
 end
+
+% Plot the loss of each mode
+figure;
+h = plot(wavelength*1e6,imag(beta)*20*log10(exp(1)));
+xlabel('Wavelength (\mum)');
+ylabel('Loss (dB/m)');
+set(h,'linewidth',2);
+set(gca,'fontsize',20);
