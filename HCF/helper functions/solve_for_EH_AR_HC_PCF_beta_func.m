@@ -87,9 +87,9 @@ switch gas.gas_material
         permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
         n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
         
-        permittivity_r = n_from_Sellmeier(0.15).^2;
-        n_gas_150 = sqrt((permittivity_r - 1)*eta + 1); % Sellmeier is valid only above ~150nm
-        n_gas(wavelength<150) = n_gas_150;
+        permittivity_r = n_from_Sellmeier(0.113).^2;
+        n_gas_113 = sqrt((permittivity_r - 1)*eta + 1); % Sellmeier is valid only above ~113nm
+        n_gas(gas_wavelength<113e-9) = n_gas_113;
         
         imag_k_gas = 0;
     case 'CH4'
