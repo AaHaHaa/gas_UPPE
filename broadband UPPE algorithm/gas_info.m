@@ -46,6 +46,8 @@ switch gas.fiber_type
         [fiber.betas,fiber.SR,sim.mode_profiles] = solve_for_EH_MWLW_coating_beta_func(wavelength,eta,sim,gas);
     case 'AR_HC_PCF' % anti-resonant hollow-core fiber
         [fiber.betas,fiber.SR,sim.mode_profiles] = solve_for_EH_AR_HC_PCF_beta_func(wavelength,eta,sim,gas);
+    case 'Kagome' % Kagome hollow-core fiber
+        [fiber.betas,fiber.SR,sim.mode_profiles] = solve_for_EH_Kagome_beta_func(wavelength,eta,sim,gas);
     otherwise
         error('fiber_type is wrong.');
 end

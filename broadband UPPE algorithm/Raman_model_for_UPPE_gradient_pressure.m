@@ -83,7 +83,7 @@ if sim.Raman_model ~= 0
             gas_eqn.num_Raman = 1;
     end
 else % no Raman
-    gas_eqn = struct('Nt',gas_Nt,'upsampling_zeros', upsampling_zeros,'n',n);
+    gas_eqn = struct('Nt',gas_Nt,'dt',gas_dt,'upsampling_zeros', upsampling_zeros,'n',n);
 end
 
 % Create a damped frequency window to kill the peaks around the edges of the window

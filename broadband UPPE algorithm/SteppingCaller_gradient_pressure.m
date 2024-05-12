@@ -139,9 +139,6 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
                                                      omegas,wavelength);
         Raw_sponRS = Raw;
         Rbw_sponRS = Raw;
-    else
-        Raw_sponRS = [];
-        Rbw_sponRS = [];
     end
 
     % Start the steppping
