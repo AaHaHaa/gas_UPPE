@@ -1,3 +1,9 @@
+% This code plots the figures of Konyschenko's paper
+%
+% Konyashchenko et al., "Frequency shifting of sub-100 fs laser pulses by 
+% stimulated Raman scattering in a capillary filled with pressurized gas," 
+% Appl. Phys. B 93, 455-461 (2008)
+
 close all; clearvars;
 
 addpath('../../../user_helpers');

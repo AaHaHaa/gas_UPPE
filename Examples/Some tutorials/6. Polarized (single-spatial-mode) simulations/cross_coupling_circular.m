@@ -71,7 +71,6 @@ gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles
 % gas.(gas.gas_material).(Raman_type).(Raman_parameters)
 % 
 % e.g.
-%    gas.N2.R.T1 - N2's upper population lifetime for the excited rotational level (unused)
 %    gas.N2.R.T2 - N2's coherence decay time between the ground state and the excited rotational level
 %    gas.N2.R.gamma - N2's polarizability anisotropy
 %    gas.N2.R.polarization_calibration - calibration factor to the paper's polarizability anisotropy value (gamma)
@@ -81,7 +80,6 @@ gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles
 %    gas.N2.R.omega - N2's rotational transition angular frequencies
 %    gas.N2.R.preR - N2's prefactors, representing Raman strength, of rotational Raman scattering
 %
-%    gas.N2.V.T1 - N2's upper population lifetime for the excited vibrational level (unused)
 %    gas.N2.V.T2 - N2's coherence decay time between the ground state and the excited vibrational level
 %    gas.N2.V.Dalpha - N2's polarizability derivative
 %    gas.N2.V.Dgamma - N2's polarizability-anisotropy derivative
@@ -102,7 +100,7 @@ initial_condition.fields = initial_condition.fields.*sqrt([0.99,0.01]); % 1% ene
 %% Propagation
 prop_output = UPPE_propagate(fiber,initial_condition,sim,gas);
 
-%%
+%% Plot
 spectrum = abs(fftshift(ifft(prop_output.fields),1)).^2;
 spectrum = spectrum./max(spectrum(:));
 

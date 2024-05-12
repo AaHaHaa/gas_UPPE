@@ -4,7 +4,7 @@
 
 close all; clearvars;
 
-addpath('../../../user_helpers','../../../broadband UPPE algorithm');
+addpath('../../user_helpers','../../broadband UPPE algorithm');
 
 %% Setup parameters
 c = 299792458*1e-12; % m/ps
@@ -18,7 +18,7 @@ sim.progress_bar_name = 'SPM';
 sim.pulse_centering = false;
 
 num_save = 1;
-fiber.L0 = 0.5; % propagation length
+fiber.L0 = 0.5; % m; propagation length
 sim.save_period = fiber.L0/num_save;
 
 f = sim.f0+(-Nt/2:Nt/2-1)'/time_window; % THz
@@ -85,7 +85,7 @@ gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles
 %    gas.H2.V.preR - H2's prefactors, representing Raman strength, of vibrational Raman scattering
 [fiber,sim,gas] = gas_info(fiber,sim,gas,lambda*1e-9);
 
-%% Initial condition and Propagate
+%% Initial condition
 tfwhm = 3; % ps
 
 total_energy = 2e6; % nJ
@@ -93,7 +93,8 @@ pump_wavelength = 1030e-9; % m
 freq_shift = c/pump_wavelength - sim.f0;
 initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,1,Nt,{'ifft',freq_shift});
 
+%% Propagation
 prop_output = UPPE_propagate(fiber,initial_condition,sim,gas);
 
-%%
+%% Save the results
 save('Raman_enhanced_SPM.mat');

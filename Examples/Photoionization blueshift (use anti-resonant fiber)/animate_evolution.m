@@ -1,6 +1,9 @@
+% As the file name suggests, this code creates an animation of spectral
+% evolution during pulse propagation.
+
 clearvars; close all;
 
-addpath('../../../user_helpers');
+addpath('../../user_helpers');
 
 load('photoionization_blueshift_5.2uJ.mat');
 

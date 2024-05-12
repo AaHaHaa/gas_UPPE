@@ -1,6 +1,9 @@
+% This code draws several photoionization-related parameters, such as
+% Keldysh parameter, electron density, etc.
+
 clearvars; close all;
 
-addpath('../../../user_helpers');
+addpath('../../user_helpers');
 
 load('photoionization_blueshift_5.2uJ.mat');
 

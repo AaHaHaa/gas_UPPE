@@ -36,9 +36,9 @@ input_field.fields = chirped_pulse;
 %% Gas info
 [fiber,sim] = load_default_UPPE_propagate(fiber,sim);
 
-gas.core_radius = 30e-6; % m
+gas.core_radius = 33e-6; % m
 gas.temperature = 288.15; % K
-gas.pressure = 35*1.01325e5; % Pa
+gas.pressure = 23*1.01325e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 1030e-9; % m
 gas.gas_material = 'H2';

@@ -18,4 +18,5 @@ Feel free to ask questions here or by sending me an email (email address is in m
 ## Important notice:<br>
 * 5/11/2024:<br>
 I added some examples. APL Photonics data files are updated so that they can be run correctly.  
-A bug regarding SRS under gradient pressure is also fixed.
+A bug regarding SRS under gradient pressure is also fixed.  
+8pm (GMT-4): Extensive comments are added to examples.

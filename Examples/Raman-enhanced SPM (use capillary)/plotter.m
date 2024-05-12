@@ -1,6 +1,6 @@
 clearvars; close all;
 
-addpath('../../../user_helpers/');
+addpath('../../user_helpers/');
 
 load('Raman_enhanced_SPM.mat');
 

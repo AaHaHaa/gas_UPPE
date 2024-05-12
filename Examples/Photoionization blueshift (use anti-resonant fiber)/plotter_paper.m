@@ -1,6 +1,12 @@
+% This code plots several figures used in the paper:
+%
+% Yi-Hao Chen and Frank Wise, "Unified and vector theory of Raman 
+% scattering in gas-filled hollow-core fiber across temporal regimes," APL 
+% Photonics 9(3), 030902 (2024).
+
 clearvars; close all;
 
-addpath('../../../user_helpers');
+addpath('../../user_helpers');
 
 spectrum_wavelength = cell(1,4);
 

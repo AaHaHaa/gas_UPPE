@@ -101,7 +101,7 @@ initial_condition.fields = initial_condition.fields.*sqrt([0.99,0.01]); % 1% ene
 %% Propagation
 prop_output = UPPE_propagate(fiber,initial_condition,sim,gas);
 
-%%
+%% Plot
 spectrum = abs(fftshift(ifft(prop_output.fields),1)).^2;
 spectrum = spectrum./max(spectrum(:));
 

@@ -3,7 +3,7 @@
 %clearvars;
 close all;
 
-addpath('../../../user_helpers');
+addpath('../../user_helpers');
 
 freq_range = [166,400];
 wave_range = 3e5./fliplr(freq_range);

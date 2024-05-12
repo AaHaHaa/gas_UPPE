@@ -2,7 +2,7 @@ clearvars; close all;
 
 addpath('../../../user_helpers');
 
-load('SM_10bar.mat');
+load('SM_20bar.mat');
 
 permittivity0 = 8.85418782e-12;
 

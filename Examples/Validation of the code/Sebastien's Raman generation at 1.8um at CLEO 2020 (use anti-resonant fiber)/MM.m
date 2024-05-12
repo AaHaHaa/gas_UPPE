@@ -40,7 +40,7 @@ input_field.fields = input_field.fields.*[sqrt(2),1,1e-3]/sqrt(3);
 %% Gas info
 [fiber,sim] = load_default_UPPE_propagate(fiber,sim);
 
-gas.core_radius = 30e-6; % m
+gas.core_radius = 33e-6; % m
 gas.temperature = 288.15; % K
 gas.pressure = 10*1.01325e5; % Pa
 gas.wavelength_order = 6;

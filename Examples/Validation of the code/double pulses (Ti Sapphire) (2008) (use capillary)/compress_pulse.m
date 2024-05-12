@@ -13,25 +13,25 @@ initial.fields = prop_output{2}.fields(:,1,1);
 initial.dt = dt;
 initial.fields(range{2},:,:) = 0;
 
-%%
+%% Anti-Stokes pulse
 lambda1 = 600; % nm
 probe_pulse1 = gaussian_spectral_filter(probe_pulse, sim.f0, lambda1, 100);
 
 disp(sum(abs(probe_pulse1.fields).^2)/sum(abs(initial.fields).^2)*100);
 
-%%
+%% Pump pulse
 lambda2 = 800; % nm
 probe_pulse2 = gaussian_spectral_filter(probe_pulse, sim.f0, lambda2, 300);
 
 disp(sum(abs(probe_pulse2.fields).^2)/sum(abs(initial.fields).^2)*100);
 
-%%
+%% Stokes pulse
 lambda3 = 1200; % nm
 probe_pulse3 = gaussian_spectral_filter(probe_pulse, sim.f0, lambda3, 300);
 
 disp(sum(abs(probe_pulse3.fields).^2)*dt/1e3);
 
-%% plot
+%% Plot
 [optimal_value,dechirped_FWHM,dechirped_field,grating_size,mirror_size] = pulse_compressor('Treacy-beta2',pi/6,sim.lambda0*1e9,t,probe_pulse3.fields,1e-3/1000,false,false,-1);
 transform_limited_field = calc_transform_limited( probe_pulse3.fields );
 figure;
