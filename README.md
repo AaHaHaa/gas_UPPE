@@ -2,6 +2,10 @@
 This is the shared package to simulate pulse propagation in a gas-filled hollow-core fiber with MM-UPPE with MATLAB.
 
 It solves the pulse propagation with RK4IP if single mode and MPA if multimode. Both scalar and polarized scenarios can be simulated. The gas encompasses inert (He, Ne, Ar, Kr, Xe) and Raman-active gases (H<sub>2</sub>, N<sub>2</sub>, O<sub>2</sub>, air, and CH<sub>4</sub>). Besides, it is implemented with an adaptive step-size control for both methods, which improves the performance and allows users to be free from worrying the reliability of a simulation. Photoionization is included as well.
+> Note 1 (copied from https://github.com/AaHaHaa/MMTools):<br>
+Although adaptive-step-size control for RK4IP isn't new with published papers, adaptive-step-size control for MPA is new. I didn't publish a separate paper discussing this numerical scheme, which is perhaps the fastest and the most convenient numerical scheme for general multimode situations by far (written on 2/14/2024).
+> Note 2:<br>
+This package should be the world's first correct first-principle implementation of polarized Raman simulations with both vibrational and rotational Raman scattering. Due to the connection of angular momentum for the rotational Raman scattering, it's long been unclear how rotational Raman scattering affects nonlinear processes. Although there are a few prior studies, I would define them as qualitative (or not quite fully quantitative) investigations. This package is able to solve quantitatively all the nonlinear interactions, electronic and both types (vibrational and rotational) of Raman scattering.
 
 For multimode, GPU computations (with Nvidia cuda) is highly recommended. I have written a lot of cuda files to speed up simulations. It is controlled by `sim.gpu_yes=true or false`.
 
