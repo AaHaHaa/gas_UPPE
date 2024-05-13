@@ -82,10 +82,15 @@ switch gas.gas_material
         % pressure-induced absorption
         Raman_absorption = read_absorption(gas.gas_material,wavelength,1);
         gas.Raman_absorption = Raman_absorption./(2*pi./wavelength);
-    case {'He','Ne','Ar','Kr','Xe'}
+    case {'He','Ne','Ar'}
         n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
         
         gas.permittivity_r = n_from_Sellmeier(wavelength*1e6).^2;
+    case {'Kr','Xe'}
+        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
+        
+        gas.permittivity_r = n_from_Sellmeier(wavelength*1e6).^2;
+        gas.permittivity_r_113 = n_from_Sellmeier(0.113).^2;
     case 'CH4'
         n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
         
@@ -110,6 +115,8 @@ switch gas.fiber_type
         [fiber.betas,fiber.SR,sim.mode_profiles] = solve_for_EH_MWLW_coating_beta_func(wavelength,eta,sim,gas);
     case 'AR_HC_PCF' % anti-resonant hollow-core fiber
         [fiber.betas,fiber.SR,sim.mode_profiles] = solve_for_EH_AR_HC_PCF_beta_func(wavelength,eta,sim,gas);
+    case 'Kagome' % Kagome hollow-core fiber
+        [fiber.betas,fiber.SR,sim.mode_profiles] = solve_for_EH_Kagome_beta_func(wavelength,eta,sim,gas);
     otherwise
         error('fiber_type is wrong.');
 end

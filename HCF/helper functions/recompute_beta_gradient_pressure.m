@@ -3,11 +3,9 @@ function beta = recompute_beta_gradient_pressure(wavelength,eta,gas)
 %with gas density eta (with the unit "amagat").
 %
 %   gas.permittivity_r is the gas permittivity with 1 amagat
-%   gas.permittiivty_r_120 and gas.permittivity_r_400 are special values to
-%   be used to remove singularity in the Sellmeier equation.
+%   gas.permittiivty_r_113, gas.permittiivty_r_120 and gas.permittivity_r_400 are special values to be used to remove singularity in the Sellmeier equation.
 %
-%   gas.coeff_beta_with_eta = gas.k0.^2./gas.beta_no_gas is a 
-%   pre-calculated coefficient in calculating the propagation constant.
+%   gas.coeff_beta_with_eta = gas.k0.^2./gas.beta_no_gas is a pre-calculated coefficient in calculating the propagation constant.
 
 %% Refractive index
 switch gas.gas_material
@@ -32,8 +30,13 @@ switch gas.gas_material
         
         % pressure-induced absorption
         n_gas = n_gas + 1i*gas.Raman_absorption*eta^2;
-    case {'Ar','Xe','Kr','Ne','He'}
+    case {'Ar','Ne','He'}
         n_gas = sqrt((gas.permittivity_r - 1)*eta + 1); % refractive index of the gas
+    case {'Xe','Kr'}
+        n_gas = sqrt((gas.permittivity_r - 1)*eta + 1); % refractive index of the gas
+        
+        n_gas_113 = sqrt((gas.permittivity_r_113 - 1)*eta + 1); %  % Sellmeier is valid only above 113nm
+        n_gas(wavelength<113e-9) = n_gas_113;
     case 'CH4'
         n_gas = sqrt((gas.permittivity_r - 1)*eta + 1); % refractive index of the gas
         
@@ -43,7 +46,7 @@ switch gas.gas_material
 end
 
 % beta = beta_no_gas + gas.k0.^2./gas.beta_no_gas.*(n_gas-1)
-beta = gas.beta_no_gas + gas.coeff_beta_with_eta.*(n_gas-1); % beta is beta at the desired gas pressure
+beta = gas.beta_no_gas + gas.coeff_beta_with_eta.*(n_gas-1); % beta is propagation constant at the desired gas pressure
 
 end
 
