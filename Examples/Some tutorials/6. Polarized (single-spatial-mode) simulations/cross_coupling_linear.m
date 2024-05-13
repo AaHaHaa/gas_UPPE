@@ -95,7 +95,7 @@ tfwhm = 0.3; % ps
 total_energy = 100e3; % nJ
 pump_wavelength = 1030e-9; % m
 freq_shift = c/pump_wavelength - sim.f0;
-initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,length(sim.midx),Nt,{'ifft',freq_shift},sqrt([1,1e-3*ones(1,length(sim.midx)-1)])); % sim.midx=1 for single-spatial-mode simulations
+initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,length(sim.midx),Nt,{'ifft',freq_shift});
 initial_condition.fields = initial_condition.fields.*sqrt([0.99,0.01]); % 1% energy is in the other polarization
 
 %% Propagation

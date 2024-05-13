@@ -5,6 +5,8 @@
 % a circularly polarized pulse, depolarization is significant even under
 % decent nonlinear interactions, compared to the linearly polarized case.
 % Please the other script for the linearly polarized simulation.
+%
+% Multiple spatial modes are considered.
 
 close all; clearvars;
 
@@ -17,7 +19,9 @@ Nt = 2^11;
 [f0,f_range,time_window,dt] = find_tw_f0(c./wavelength_range,Nt);
 
 sim.f0 = f0;
+%sim.progress_bar = false;
 sim.progress_bar_name = 'cross circularly-polarized coupling';
+sim.midx = [1,2]; % two spatial modes are included, EH11 and EH12
 sim.scalar = false; % activate polarized simulations
 sim.ellipticity = 1; % 0 is linear polarization and 1 is circular polarization
 
@@ -92,8 +96,7 @@ tfwhm = 0.3; % ps
 total_energy = 100e3; % nJ
 pump_wavelength = 1030e-9; % m
 freq_shift = c/pump_wavelength - sim.f0;
-initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,length(sim.midx),Nt,{'ifft',freq_shift});
-initial_condition.fields = initial_condition.fields.*sqrt([0.99,0.01]); % 1% energy is in the other polarization
+initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,length(sim.midx)*2,Nt,{'ifft',freq_shift},sqrt([0.97,0.01*ones(1,length(sim.midx)*2-1)])); % arranged as [EH11+,EH11-,EH12+,EH12-]
 
 %% Propagation
 prop_output = UPPE_propagate(fiber,initial_condition,sim,gas);
@@ -109,4 +112,4 @@ xlabel('Frequency (THz)');
 ylabel('PSD (norm.)');
 set(gca,'fontsize',25);
 xlim([270,310]);
-legend('+','-');
+legend('EH11+','EH11-','EH12+','EH12-');

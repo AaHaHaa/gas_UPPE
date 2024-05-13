@@ -1,10 +1,11 @@
 % This code simulates the depolarization effect when the pump pulse is
-% circularly polarized.
+% linearly polarized.
 %
-% Because of strong cross-circular polarization coupling induced by SRS for
-% a circularly polarized pulse, depolarization is significant even under
-% decent nonlinear interactions, compared to the linearly polarized case.
-% Please the other script for the linearly polarized simulation.
+% Under decent nonlinear interaction, cross-linear polarization coupling
+% isn't strong, so polarization is roughly nicely maintained in its
+% original polarization.
+%
+% Multiple spatial modes are considered.
 
 close all; clearvars;
 
@@ -17,9 +18,11 @@ Nt = 2^11;
 [f0,f_range,time_window,dt] = find_tw_f0(c./wavelength_range,Nt);
 
 sim.f0 = f0;
-sim.progress_bar_name = 'cross circularly-polarized coupling';
+%sim.progress_bar = false;
+sim.progress_bar_name = 'cross linearly-polarized coupling';
+sim.midx = [1,2]; % two spatial modes are included, EH11 and EH12
 sim.scalar = false; % activate polarized simulations
-sim.ellipticity = 1; % 0 is linear polarization and 1 is circular polarization
+sim.ellipticity = 0; % 0 is linear polarization and 1 is circular polarization
 
 num_save = 10;
 fiber.L0 = 0.5; % m; propagation length
@@ -69,6 +72,7 @@ gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles
 % gas.(gas.gas_material).(Raman_type).(Raman_parameters)
 % 
 % e.g.
+%    gas.N2.R.T1 - N2's upper population lifetime for the excited rotational level (unused)
 %    gas.N2.R.T2 - N2's coherence decay time between the ground state and the excited rotational level
 %    gas.N2.R.gamma - N2's polarizability anisotropy
 %    gas.N2.R.polarization_calibration - calibration factor to the paper's polarizability anisotropy value (gamma)
@@ -78,6 +82,7 @@ gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles
 %    gas.N2.R.omega - N2's rotational transition angular frequencies
 %    gas.N2.R.preR - N2's prefactors, representing Raman strength, of rotational Raman scattering
 %
+%    gas.N2.V.T1 - N2's upper population lifetime for the excited vibrational level (unused)
 %    gas.N2.V.T2 - N2's coherence decay time between the ground state and the excited vibrational level
 %    gas.N2.V.Dalpha - N2's polarizability derivative
 %    gas.N2.V.Dgamma - N2's polarizability-anisotropy derivative
@@ -92,8 +97,7 @@ tfwhm = 0.3; % ps
 total_energy = 100e3; % nJ
 pump_wavelength = 1030e-9; % m
 freq_shift = c/pump_wavelength - sim.f0;
-initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,length(sim.midx),Nt,{'ifft',freq_shift});
-initial_condition.fields = initial_condition.fields.*sqrt([0.99,0.01]); % 1% energy is in the other polarization
+initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,length(sim.midx)*2,Nt,{'ifft',freq_shift},sqrt([0.97,0.01*ones(1,length(sim.midx)*2-1)])); % arranged as [EH11x,EH11y,EH12x,EH12y]
 
 %% Propagation
 prop_output = UPPE_propagate(fiber,initial_condition,sim,gas);
@@ -103,10 +107,10 @@ spectrum = abs(fftshift(ifft(prop_output.fields),1)).^2;
 spectrum = spectrum./max(spectrum(:));
 
 figure;
-h = plot(f,spectrum(:,:,end),'linewidth',2);
+h = plot(f,spectrum(:,:,end)/max(max(spectrum(:,:,end))),'linewidth',2);
 set(h(1),'Color','b'); set(h(2),'Color','r');
 xlabel('Frequency (THz)');
 ylabel('PSD (norm.)');
 set(gca,'fontsize',25);
 xlim([270,310]);
-legend('+','-');
+legend('EH11x','EH11y','EH12x','EH12y');
