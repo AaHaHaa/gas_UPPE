@@ -1,6 +1,6 @@
 function foutput = UPPE_propagate(fiber, initial_condition, sim, gas)
 %UPPE_PROPAGATE Propagate an initial multimode pulse through an arbitrary distance of a hollow-core fiber
-%   This is a caller function for UPPE_propagate_constant_pressure().
+%   This is a caller function for UPPE_propagate_constant_pressure() and UPPE_propagate_gradient_pressure().
 
 %%
 if ispc

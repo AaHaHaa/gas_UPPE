@@ -1,6 +1,7 @@
 function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, sim, gas)
 %UPPE_PROPAGATE_CONSTANT_PRESSURE Propagate an initial multimode pulse through 
 %an arbitrary distance of a hollow-core fiber with an adaptive-step method.
+%The HCF is filled with a constant gas pressure.
 %
 % -------------------------------------------------------------------------
 %

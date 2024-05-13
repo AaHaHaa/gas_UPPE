@@ -1,7 +1,7 @@
 function foutput = UPPE_propagate_gradient_pressure(fiber, initial_condition, sim, gas)
-%UPPE_PROPAGATE_GRADIENT_PRESSURE Propagate an initial multimode pulse 
-%through an arbitrary distance of an optical fiber with an adaptive step 
-%method.
+%UPPE_PROPAGATE_GRADIENT_PRESSURE Propagate an initial multimode pulse through 
+%an arbitrary distance of a hollow-core fiber with an adaptive-step method.
+%The HCF is filled with a gradient gas pressure.
 %
 % -------------------------------------------------------------------------
 %
