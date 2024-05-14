@@ -218,7 +218,7 @@ if sim.photoionization_model
     c = 299792458;
     prefactor = [prefactor,...
                  {-1i/4./ifftshift(sim.mode_profiles.norms(:,1),1).^2*e^2/me./real_omegas,... % ionization-related loss
-                  -gas.ionization_energy/8/fiber.SR(1)*permittivity0*c./ifftshift(sim.mode_profiles.norms(:,1),1).^2}]; % ionization-related phase contribution
+                  -gas.ionization.energy/8/fiber.SR(1)*permittivity0*c./ifftshift(sim.mode_profiles.norms(:,1),1).^2}]; % ionization-related phase contribution
 end
 
 if sim.gpu_yes

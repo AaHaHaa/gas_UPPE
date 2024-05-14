@@ -5,7 +5,7 @@ clearvars; close all;
 
 addpath('../../user_helpers');
 
-load('photoionization_blueshift_5.2uJ.mat');
+load('photoionization_blueshift_5.6uJ.mat');
 
 [Keldysh_parameter,W,ne,g] = calc_photoionization_parameter(prop_output,fiber,sim,gas.gas_material);
 

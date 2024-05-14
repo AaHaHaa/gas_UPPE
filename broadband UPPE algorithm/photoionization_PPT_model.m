@@ -1,4 +1,5 @@
 function [ne,DneDt] = photoionization_PPT_model(A_t, inverse_Aeff, ionization_energy, f0, dt, Ng,...
+                                                l, Z,...
                                                 erfi_x, erfi_y,...
                                                 ellipticity)
 %PHOTOIONIZATION_PPT_MODEL This code computes the ionized free electrons
@@ -13,6 +14,8 @@ function [ne,DneDt] = photoionization_PPT_model(A_t, inverse_Aeff, ionization_en
 %   ionization_energy: scalar (J)
 %   dt: scalar (ps)
 %   Ng: the gas number density (1/m^3)
+%   l: quantum number l
+%   Z: effective charge
 %   erfi_x, erfi_y: (Nt,1); the lookup table for the imaginary error function, erfi()
 %   ellipticity: a scalar; only ellipticity=0 is allowed
 %
@@ -41,7 +44,8 @@ hbar = h/2/pi;
 a0 = k*hbar^2/me/e^2; % Bohr radius
 U_H = e^2/k/a0/2; % hydrogen ionization energy = 13.6 eV
 
-n = sqrt(U_H/ionization_energy); % effective principal quantum number
+nstar = Z*sqrt(U_H/ionization_energy); % effective principal quantum number n
+lstar = max(0,nstar-1); % effective principal quantum number l
 
 I = abs(A_t).^2*inverse_Aeff; % intensity; W/m^2
 
@@ -60,10 +64,24 @@ beta = 2*Keldysh_parameter./sqrt(1+Keldysh_parameter.^2);
 g = 3/2./Keldysh_parameter.*((1+1/2./Keldysh_parameter.^2).*asinh(Keldysh_parameter) - sqrt(1+Keldysh_parameter.^2)/2./Keldysh_parameter);
 
 % the PPT correction factor
-A0 = sum(2/sqrt(3)*Keldysh_parameter.^2./(1+Keldysh_parameter.^2).*exp(-2*n_v.*asinh(Keldysh_parameter)).*interp1(erfi_x,erfi_y,sqrt(beta.*n_v)),2);
-A0(Keldysh_parameter<0.8) = 1; % A0 should be close to 1 at small Keldysh parameter
+A = cell(1,2); % A = {A0,A1} a cell container for the PPT correction factors, A0 and A1
+erfix = interp1(erfi_x,erfi_y,sqrt(beta.*n_v));
+A{1} = sum(2/sqrt(3)*Keldysh_parameter.^2./(1+Keldysh_parameter.^2).*exp(-2*n_v.*asinh(Keldysh_parameter)).*erfix,2);
+A{1}(Keldysh_parameter<0.8) = 1; % A0 should be close to 1 at small Keldysh parameter
+if l == 1
+    A{2} = sum(4/sqrt(3*pi)*Keldysh_parameter.^2./(1+Keldysh_parameter.^2).*exp(-2*n_v.*asinh(Keldysh_parameter)).*...
+              ( sqrt(pi)/2*beta.*n_v.*erfix + ...
+                sqrt(pi)/4*erfix - ...
+                sqrt(beta.*n_v)/2.*exp(beta.*n_v) ),2);
+    A{2}(Keldysh_parameter<0.8) = 1; % A1 should be close to 1 at small Keldysh parameter
+end
 
-W = 2^(2*n)/n/gamma(n)/gamma(n+1)*ionization_energy/hbar*sqrt(6/pi)*A0.*(sqrt(permittivity0*c/2./I)*kappa./sqrt(1+Keldysh_parameter.^2)).^(2*n-1.5).*exp(-sqrt(permittivity0*c/2./I)*kappa/3.*g);
+Cnl2 = 2^(2*nstar)/nstar/gamma(nstar+lstar+1)/gamma(nstar-lstar);
+W = zeros(size(I)); % initialize W for the latter summation of the overall ionization rate including m = -l to l
+for m = -l:l
+    flm = (2*lstar+1)*gamma(lstar+abs(m)+1)/2^(abs(m))/factorial(abs(m))/gamma(lstar-abs(m)+1);
+    W = W + Cnl2*flm*ionization_energy/hbar*sqrt(6/pi)*A{abs(m)+1}.*(sqrt(permittivity0*c/2./I)*kappa./sqrt(1+Keldysh_parameter.^2)).^(2*nstar-abs(m)-1.5).*exp(-sqrt(permittivity0*c/2./I)*kappa/3.*g);
+end
 W(I<max(I)/1e4) = 0; % avoid non-negligible W when there is no or weak field due to numerical precision error
 
 ne = Ng*cumsum(W)*(dt*1e-12);

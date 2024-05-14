@@ -24,3 +24,5 @@ Feel free to ask questions here or by sending me an email (email address is in m
 I added some examples. APL Photonics data files are updated so that they can be run correctly.  
 A bug regarding SRS under gradient pressure is also fixed.  
 8pm (GMT-4): Extensive comments are added to examples.
+* 5/14/2024:<br>
+I extended the photoionization model to gases other than H2 and He.
