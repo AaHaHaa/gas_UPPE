@@ -24,8 +24,11 @@ function [ne,DneDt] = photoionization_PPT_model(A_t, inverse_Aeff, ionization_en
 %   DneDt: (Nt,1); the time derivative of ne (1/m^3/s)
 
 [Nt,num_modes] = size(A_t);
-if num_modes ~= 1 && ellipticity ~= 0
+if num_modes ~= 1 || ellipticity ~= 0
     error('Photoionization model works only for linearly polarized single mode.');
+end
+if isempty(l) || l>1 % l is implemented with 0 or 1 for now
+    error('Current material isn''t supported yet.');
 end
 
 % Find instantaneous frequency of the pulse
@@ -78,7 +81,7 @@ end
 
 Cnl2 = 2^(2*nstar)/nstar/gamma(nstar+lstar+1)/gamma(nstar-lstar);
 W = zeros(size(I)); % initialize W for the latter summation of the overall ionization rate including m = -l to l
-for m = -l:l
+for m = -l:l % l is implemented with 0 or 1 for now
     flm = (2*lstar+1)*gamma(lstar+abs(m)+1)/2^(abs(m))/factorial(abs(m))/gamma(lstar-abs(m)+1);
     W = W + Cnl2*flm*ionization_energy/hbar*sqrt(6/pi)*A{abs(m)+1}.*(sqrt(permittivity0*c/2./I)*kappa./sqrt(1+Keldysh_parameter.^2)).^(2*nstar-abs(m)-1.5).*exp(-sqrt(permittivity0*c/2./I)*kappa/3.*g);
 end
