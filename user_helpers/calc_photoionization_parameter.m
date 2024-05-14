@@ -23,19 +23,59 @@ function [Keldysh_parameter,W,relative_ne,g] = calc_photoionization_parameter(pr
 %% Ionization potential
 switch gas_material
     case 'H2'
-        ionization_energy = 15.43; % eV
-    case 'N2'
-        ionization_energy = 14.5341; % eV
-    case 'Ar'
-        ionization_energy = 15.76; % eV
-    case 'He'
-        ionization_energy = 24.5874; % eV
-    case 'Kr'
-        ionization_energy = 14.00; % eV
-    case 'Xe'
-        ionization_energy = 12.13; % eV
-    case 'Ne'
-        ionization_energy = 20.18; % eV
+            ionization_energy = 15.42593; % eV
+            
+            l = 0; % quantum number l
+            Z = 1; % effective charge
+        case 'N2'
+            ionization_energy = 15.581; % eV
+            
+            % The values below are taken from https://doi.org/10.1016/S0030-4018(99)00113-3
+            % Talebpour et al., "Semi-empirical model for the rate of
+            % tunnel ionization of N2 and O2 molecule in an intense
+            % Ti:sapphire laser pulse," Opt. Comm. 163, 29-32 (1999)
+            l = 0; % quantum number l
+            Z = 0.9; % effective charge
+        case 'O2'
+            ionization_energy = 12.0697; % eV
+            
+            % The values below are taken from https://doi.org/10.1016/S0030-4018(99)00113-3
+            % Talebpour et al., "Semi-empirical model for the rate of
+            % tunnel ionization of N2 and O2 molecule in an intense
+            % Ti:sapphire laser pulse," Opt. Comm. 163, 29-32 (1999)
+            l = 0; % quantum number l
+            Z = 0.53; % effective charge
+        case 'CH4'
+            ionization_energy = 12.61; % eV
+            
+            % The ionization of CH4 isn't supported yet.
+            l = [];
+            Z = [];
+        case 'He'
+            ionization_energy = 24.58741; % eV
+            
+            l = 0; % quantum number l
+            Z = 1; % effective charge
+        case 'Ne'
+            ionization_energy = 21.56454; % eV
+            
+            l = 1; % quantum number l
+            Z = 1; % effective charge
+        case 'Ar'
+            ionization_energy = 15.759; % eV
+            
+            l = 1; % quantum number l
+            Z = 1; % effective charge
+        case 'Kr'
+            ionization_energy = 13.99961; % eV
+            
+            l = 1; % quantum number l
+            Z = 1; % effective charge
+        case 'Xe'
+            ionization_energy = 12.12987; % eV
+            
+            l = 1; % quantum number l
+            Z = 1; % effective charge
     otherwise
         error('This code doesn''t support the ionization computation of other materials yet');
 end
@@ -77,7 +117,7 @@ Keldysh_parameter = sqrt(ionization_energy/2./ponderomotive_energy);
 %% Photoionization - erfi() lookup table
 % Because calculating erfi is slow, it's faster if I create a lookup table
 % and use interp1. The range of input variable for erfi is 0~sqrt(2) only.
-n_Am = 10; % the number of summation of Am term in photoionization
+n_Am = 1000; % the number of summation of Am term in photoionization
 erfi_x = linspace(0,sqrt(2*(n_Am+1)),1000)';
 erfi_y = erfi(erfi_x);
 
@@ -88,7 +128,8 @@ hbar = h/2/pi;
 a0 = k*hbar^2/me/e^2; % Bohr radius
 U_H = e^2/k/a0/2; % hydrogen ionization energy = 13.6 eV
 
-n = sqrt(U_H/ionization_energy); % effective principal quantum number
+nstar = Z*sqrt(U_H/ionization_energy); % effective principal quantum number n
+lstar = max(0,nstar-1); % effective principal quantum number l
 
 kappa = 4*ionization_energy*sqrt(2*me*ionization_energy)/hbar/e;
 
@@ -99,11 +140,25 @@ beta = 2*Keldysh_parameter./sqrt(1+Keldysh_parameter.^2);
 g = 3/2./Keldysh_parameter.*((1+1/2./Keldysh_parameter.^2).*asinh(Keldysh_parameter) - sqrt(1+Keldysh_parameter.^2)/2./Keldysh_parameter);
 
 % the PPT correction factor
-A0 = sum(2/sqrt(3)*Keldysh_parameter.^2./(1+Keldysh_parameter.^2).*exp(-2*n_v.*asinh(Keldysh_parameter)).*interp1(erfi_x,erfi_y,sqrt(beta.*n_v)),2);
-A0(Keldysh_parameter<0.8) = 1;
+A = cell(1,2); % A = {A0,A1} a cell container for the PPT correction factors, A0 and A1
+erfix = interp1(erfi_x,erfi_y,sqrt(beta.*n_v));
+A{1} = sum(2/sqrt(3)*Keldysh_parameter.^2./(1+Keldysh_parameter.^2).*exp(-2*n_v.*asinh(Keldysh_parameter)).*erfix,2);
+A{1}(Keldysh_parameter<0.8) = 1; % A0 should be close to 1 at small Keldysh parameter
+if l == 1
+    A{2} = sum(4/sqrt(3*pi)*Keldysh_parameter.^2./(1+Keldysh_parameter.^2).*exp(-2*n_v.*asinh(Keldysh_parameter)).*...
+              ( sqrt(pi)/2*beta.*n_v.*erfix + ...
+                sqrt(pi)/4*erfix - ...
+                sqrt(beta.*n_v)/2.*exp(beta.*n_v) ),2);
+    A{2}(Keldysh_parameter<0.8) = 1; % A1 should be close to 1 at small Keldysh parameter
+end
 
-W = 2^(2*n)/n/gamma(n)/gamma(n+1)*ionization_energy/hbar*sqrt(6/pi)*A0.*(sqrt(permittivity0*c/2./I)*kappa./sqrt(1+Keldysh_parameter.^2)).^(2*n-1.5).*exp(-sqrt(permittivity0*c/2./I)*kappa/3.*g);
-W(I<max(I)/1e4) = 0;
+Cnl2 = 2^(2*nstar)/nstar/gamma(nstar+lstar+1)/gamma(nstar-lstar);
+W = zeros(size(I)); % initialize W for the latter summation of the overall ionization rate including m = -l to l
+for m = -l:l
+    flm = (2*lstar+1)*gamma(lstar+abs(m)+1)/2^(abs(m))/factorial(abs(m))/gamma(lstar-abs(m)+1);
+    W = W + Cnl2*flm*ionization_energy/hbar*sqrt(6/pi)*A{abs(m)+1}.*(sqrt(permittivity0*c/2./I)*kappa./sqrt(1+Keldysh_parameter.^2)).^(2*nstar-abs(m)-1.5).*exp(-sqrt(permittivity0*c/2./I)*kappa/3.*g);
+end
+W(I<max(I)/1e4) = 0; % avoid non-negligible W when there is no or weak field due to numerical precision error
 
 % Number density of the gas
 relative_ne = cumsum(W)*(prop_output.dt*1e-12);
