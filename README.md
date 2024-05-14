@@ -19,6 +19,9 @@ The structure of this code is developed similar to our solid-core counterpart (h
 I'm Yi-Hao Chen, the author of the code and from Frank Wise's group at Cornell Applied Physics.  
 Feel free to ask questions here or by sending me an email (email address is in my paper).
 
+## Upgrade this code together:<br>
+If you have any other function that you think important, please point it out in Github's discussions or send me an email. For example, perhaps you would like to add more gas species. I implement with current gases just due to my own research interest.
+
 ## Important notice:<br>
 * 5/11/2024:<br>
 I added some examples. APL Photonics data files are updated so that they can be run correctly.  
