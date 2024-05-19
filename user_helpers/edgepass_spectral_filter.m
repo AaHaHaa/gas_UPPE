@@ -1,5 +1,5 @@
-function [output,fig] = edgepass_filter(type, input, f0, cutonoff_lambda, varargin)
-%EDGEPASS_FILTER Apply a spectral edgefilter to a field
+function [output,fig] = edgepass_spectral_filter(type, input, f0, cutonoff_lambda, varargin)
+%EDGEPASS_SPECTRAL_FILTER Apply a spectral edgefilter to a field
 %
 % Input:
 %   type - 'lowpass' or 'highpass'; passband based on the wavelength
@@ -10,8 +10,9 @@ function [output,fig] = edgepass_filter(type, input, f0, cutonoff_lambda, vararg
 %
 %   Optional inputs (varargin):
 %       cutonoff_slope - the slope at the cutoff/cuton wavelength (default: 0.15)
-%       gaussexpo - supergaussian exponent (~exp(-t^(2*gaussexpo))) (default: 1)
 %       verbose - true(1) or false(0); whether to plot the input and the output spectra (default: false)
+%       OD - a scalar; the optical density in the rejection band (default: 4)
+%       gaussexpo - supergaussian exponent (~exp(-f^(2*gaussexpo))) (default: 1)
 %
 % Output:
 %   output.fields
@@ -22,12 +23,12 @@ function [output,fig] = edgepass_filter(type, input, f0, cutonoff_lambda, vararg
 c = 299792.458; % in nm/ps
 
 if ~isstruct(input)
-    error('Unlike most auxiliary functions, edgepass_filter requires that the input be a struct with at least fields and dt');
+    error('Unlike most auxiliary functions, edgepass_spectral_filter requires that the input be a struct with at least fields and dt');
 end
 
-optargs = {0.15,1,false};
+optargs = {0.15,false,4,1};
 optargs(1:length(varargin)) = varargin;
-[cutonoff_slope, gaussexpo, verbose] = optargs{:};
+[cutonoff_slope, verbose, OD, gaussexpo] = optargs{:};
 
 input_field = input.fields;
 N = size(input_field, 1);
@@ -50,6 +51,7 @@ switch type
     case 'highpass'
         mult_factor(f<=center_f) = 1;
 end
+mult_factor(mult_factor<10^(-OD)) = 10^(-OD); % make the rejection band have the optical density, OD
 
 % Apply the filter in frequency space
 output = struct('dt',input.dt,...
