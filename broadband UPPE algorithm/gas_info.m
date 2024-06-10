@@ -97,7 +97,14 @@ switch gas.gas_material
     case 'Ar' % m^2/(W*atm)
               % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
-        n2 = 7.96e-24;
+              %
+              % I divide their value by 7 after comparing with the following papers:
+              % 
+              % 1. Sartania et al.,
+              %    "Generation of 0.1-TW 5-fs optical pulses at a 1-kHz repetition rate," Opt. Lett. 22(20), 1562-1564 (1997)
+              % 2. Suda et al.,
+              %    "Generation of sub-10-fs, 5-mJ-optical pulses using a hollow fiber with a pressure gradient," Appl. Phys. Lett. 86, 111116 (2005)
+        n2 = 7.96e-24/7;
     case 'Ne' % m^2/(W*atm)
               % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
