@@ -273,6 +273,9 @@ end
 % -------------------------------------------------------------------------
 function delta_permittivity = calc_permittivity(sim,gas,gas_eqn,A_w,Nt)
 %CALC_PERMITTIVITY finds the Raman-induced permittivity change
+%
+% Only the imaginary part corresponds to the actual permittiviy contribution of each Raman response.
+% The real part is retained so that it's easier to visualize the "intensity" of the phonon strength by taking abs().
 
 if sim.ellipticity == 0 % linear polarization
     gas_eqn.R_delta_permittivity(:,1:2:end) = gas_eqn.R_delta_permittivity(:,1:2:end)*4;
@@ -288,10 +291,27 @@ switch gas.model
     case 1
         delta_permittivity = fft(R_delta_permittivity.*ifft(abs(A_t_upsampling).^2));
 end
-delta_permittivity = ifft(delta_permittivity.*(permute(max(max(real(sim.mode_profiles.mode_profiles),[],1),[],2),[1,3,2])./mean(sim.mode_profiles.norms)).^2); % find the max delta_permittivity of each mode
-% Only the imaginary part corresponds to the actual permittiviy contribution of each Raman response.
-% The real part is retained so that it's easier to visualize the "intensity" of the phonon strength by taking abs().
-delta_permittivity = fft(delta_permittivity([1:gas_eqn.n,gas_eqn.Nt-(Nt-gas_eqn.n-1):gas_eqn.Nt],:,:)); % transform back to time domain
+% Below follows the computational order as the electric field; however,
+% it creates strong aliasing during the second "fft()" operation due to the
+% downsampling process for an temporally-elongated delta permittivity.
+% To do this correctly, we need to apply the temporal and spectral
+% downsampling in the opposite order:
+%    1. spectral downsampling
+%    2. temporal downsampling with a already-zero-padding delta permittivity
+%
+% Reverse order creates "spectral downsampling with a non-zero-padding
+% delta permittivity" that induces aliasing because delta permittivity
+% doesn't reduce to zero at the temporal edges.
+% 
+% If spectral downsampling is by a factor of an integer, we can simply
+% pick data points every "integer" points temporally for spectral
+% downsampling. Therefore, only with an integer spectral downsampling
+% ratio, both downsampling can be done in the order of temporal-then-
+% spectral, downsampling.
+%delta_permittivity = ifft(delta_permittivity).*(permute(max(max(real(sim.mode_profiles.mode_profiles),[],1),[],2),[1,3,2])./mean(sim.mode_profiles.norms,1)).^2; % find the max delta_permittivity of each mode
+%delta_permittivity = fft(delta_permittivity([1:gas_eqn.n,gas_eqn.Nt-(Nt-gas_eqn.n-1):gas_eqn.Nt],:,:)); % transform back to time domain
+
+delta_permittivity = delta_permittivity(1:floor(gas_eqn.Nt/Nt):end,:,:).*(permute(max(max(real(sim.mode_profiles.mode_profiles),[],1),[],2),[1,3,2])./mean(sim.mode_profiles.norms,1)).^2; % find the max delta_permittivity of each mode
 
 if sim.gpu_yes
     delta_permittivity = gather(delta_permittivity);
