@@ -49,4 +49,3 @@ end
 beta = gas.beta_no_gas + gas.coeff_beta_with_eta.*(n_gas-1); % beta is propagation constant at the desired gas pressure
 
 end
-

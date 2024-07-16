@@ -16,9 +16,9 @@ use_gpu = false; % GPU
 
 gas_material = 'Ar';
 
-pressure = 1; % atm
+pressure = 30; % atm
 temperature = 273.15 + 25; % 25 degree Celsius
-core_radius = 150e-6; % core radius; m
+core_radius = 100e-6; % core radius; m
 
 % Don't change "wavelength"!
 num_wavelength = 1e5;

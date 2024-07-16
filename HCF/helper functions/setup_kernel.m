@@ -29,16 +29,26 @@ kernel.GridSize =[ceil(total_num/ThreadsPerBlock), 1];
 end
 
 function recompile_ptx(cuda_dir_path,cudaFilename,ptxFilename)
-    if ispc
-        system(['nvcc -ptx "', fullfile(cuda_dir_path,cudaFilename), '" --output-file "', fullfile(cuda_dir_path,ptxFilename) '"']);
-    else % unix
-        % tested: Debian 10 (Buster)
-        system(['nvcc -ccbin clang -ptx "', fullfile(cuda_dir_path,cudaFilename), '" --output-file "', fullfile(sim.cuda_dir_path,ptxFilename) '"']);
 
-        % For Yi-Hao's Debian PC only.
-        % Matlab 2020b generates ptx of ".target sm_52" by default.
-        % However, my own GPU, GeForce 660 Ti" is too old. I need to set it to sm_30 to make it work.
-        % Starting from Matlab 2021a, my own GPU isn't supported.
-        system(['sed -i ''s/.target sm_52/.target sm_30/g'' "' fullfile(cuda_dir_path,ptxFilename) '"']); % run the shell script to change it to sm_30
+if ispc
+    MATLAB_version = version('-release'); MATLAB_version = str2double(MATLAB_version(1:4));
+    if MATLAB_version < 2023
+        system(['nvcc -ptx "', fullfile(cuda_dir_path,cudaFilename), '" --output-file "', fullfile(cuda_dir_path,ptxFilename) '"']);
+    else
+        current_path = pwd;
+        cd(cuda_dir_path);
+        mexcuda('-ptx',cudaFilename);
+        cd(current_path);
     end
+else % unix
+    % tested: Debian 10 (Buster)
+    system(['nvcc -ccbin clang -ptx "', fullfile(cuda_dir_path,cudaFilename), '" --output-file "', fullfile(cuda_dir_path,ptxFilename) '"']);
+
+    % For Yi-Hao's Debian PC only.
+    % Matlab 2020b generates ptx of ".target sm_52" by default.
+    % However, my own GPU, GeForce 660 Ti" is too old. I need to set it to sm_30 to make it work.
+    % Starting from Matlab 2021a, my own GPU isn't supported.
+    system(['sed -i ''s/.target sm_52/.target sm_30/g'' "' fullfile(cuda_dir_path,ptxFilename) '"']); % run the shell script to change it to sm_30
+end
+
 end
