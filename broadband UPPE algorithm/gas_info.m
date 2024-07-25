@@ -54,6 +54,28 @@ end
 n_eff = real(fiber.betas./(2*pi./wavelength));
 
 %% Nonlinear coefficient
+% Most values come from
+% 1. Shelton, "Nonlinear-optical susceptibilities of gases measured at 1064 and 1319 nm," Phys. Rev. A, 42, 2578-2592 (1990)
+% 2. Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer, "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
+%
+% Note that the values from the following paper are wrong by a factor of 10
+% in several of the cited numbers; they copied them wrong.
+% Borzsonyi et al., "Measurement of pressure dependent nonlinear refractive index of inert gases," Opt. Express 18, 25847-25854 (2010)
+% 
+% For Ar, the following two papers seem to require around 7 times weaker n2
+% to match their experiments. We have done Ar experiments ourselves which
+% show that this reducing factor isn't necessary. We suspect that these old
+% works didn't do capillary experiments correctly. It's difficult to align
+% the beam into the capillary, which I've been experiencing and is a huge 
+% pain. Super straight capillary is required. Super high quality beam is
+% also required. Without all these, higher-order modes arise, quickly
+% deteriorating the beam spatial quality and the polarization extinction
+% ratio. Strong polarization coupling in HE modes in a capillary has
+% significant influence to nonlinear propagation.
+% 1. Sartania et al.,
+%    "Generation of 0.1-TW 5-fs optical pulses at a 1-kHz repetition rate," Opt. Lett. 22(20), 1562-1564 (1997)
+% 2. Suda et al.,
+%    "Generation of sub-10-fs, 5-mJ-optical pulses using a hollow fiber with a pressure gradient," Appl. Phys. Lett. 86, 111116 (2005)
 switch gas.gas_material
     case 'H2' % m^2/(W*atm)
               % This value is taken from Wahlstrand, et al., 
@@ -97,14 +119,7 @@ switch gas.gas_material
     case 'Ar' % m^2/(W*atm)
               % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
-              %
-              % I divide their value by 7 after comparing with the following papers:
-              % 
-              % 1. Sartania et al.,
-              %    "Generation of 0.1-TW 5-fs optical pulses at a 1-kHz repetition rate," Opt. Lett. 22(20), 1562-1564 (1997)
-              % 2. Suda et al.,
-              %    "Generation of sub-10-fs, 5-mJ-optical pulses using a hollow fiber with a pressure gradient," Appl. Phys. Lett. 86, 111116 (2005)
-        n2 = 7.96e-24/7;
+        n2 = 7.96e-24;
     case 'Ne' % m^2/(W*atm)
               % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)

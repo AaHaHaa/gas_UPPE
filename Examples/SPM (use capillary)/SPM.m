@@ -6,6 +6,21 @@
 %
 % Sartania et al., "Generation of 0.1-TW 5-fs optical pulses at a 1-kHz 
 % repetition rate," Opt. Lett. 22(20), 1562-1564 (1997)
+%
+% For Ar, the following two papers seem to require around 7 times weaker n2
+% to match their experiments. We have done Ar experiments ourselves which
+% show that this reducing factor isn't necessary. We suspect that these old
+% works didn't do capillary experiments correctly. It's difficult to align
+% the beam into the capillary, which I've been experiencing and is a huge 
+% pain. Super straight capillary is required. Super high quality beam is
+% also required. Without all these, higher-order modes arise, quickly
+% deteriorating the beam spatial quality and the polarization extinction
+% ratio. Strong polarization coupling in HE modes in a capillary has
+% significant influence to nonlinear propagation.
+% 1. Sartania et al.,
+%    "Generation of 0.1-TW 5-fs optical pulses at a 1-kHz repetition rate," Opt. Lett. 22(20), 1562-1564 (1997)
+% 2. Suda et al.,
+%    "Generation of sub-10-fs, 5-mJ-optical pulses using a hollow fiber with a pressure gradient," Appl. Phys. Lett. 86, 111116 (2005)
 
 close all;  clearvars;
 
@@ -69,6 +84,8 @@ gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles
 % gas.(gas.gas_material).(Raman_type).(Raman_parameters)
 [fiber,sim,gas] = gas_info(fiber,sim,gas,lambda*1e-9);
 
+sim.X3 = sim.X3/7;
+
 %% Initial condition
 tfwhm = 0.020; % ps
 total_energy = 1e6; % nJ
@@ -104,6 +121,8 @@ ylabel('PSD (\muJ/nm)');
 title('Spectrum');
 set(h,'linewidth',2);
 set(gca,'fontsize',14);
+
+analyze_field( t,f,prop_output.fields(:,:,end),'Treacy-t',pi/6,1e-6,true );
 
 %% Save the data
 %save('SPM.mat');
