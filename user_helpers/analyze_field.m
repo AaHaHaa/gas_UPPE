@@ -34,12 +34,6 @@ function [Strehl_ratio,dechirped_FWHM,transform_limited_FWHM,peak_power,fig] = a
 % Optional input argument:
 %   verbose: 1(true) or 0(false); whether to plot and display the results or not (default: true)
 %   global_opt: 1(true) or 0(false); whether to use global optimization for the compressor (default: false)
-%   ASE: ASE information which includes
-%           ASE.t_rep: the repetition rate of the pulse in gain-rate-eqn model (s).
-%                      This is used to compute the correct unit for the ASE spectrum.
-%           ASE.spectrum: the ASE spectrum; a column vector
-%   assumed_dechirped_duration: assumed pulse duration of the dechirped pulse.
-%                               This is used to help interpolate the field such that the temporal sampling is high enough to resolute the duration after dechirped.
 
 %% Move the required input arguments out of the optional input arguments, varargin
 switch compressor_type
@@ -93,15 +87,14 @@ end
 % Set defaults for optional inputs
 verbose = true;
 global_opt = false;
-ASE = [];
-optargs = {verbose,global_opt,ASE};
+optargs = {verbose,global_opt};
 
 % Now put these defaults into the valuesToUse cell array, 
 % and overwrite the ones specified in varargin.
 optargs(1:numvarargs) = varargin;
 
 % Place optional args in memorable variable names
-[verbose,global_opt,ASE] = optargs{:};
+[verbose,global_opt] = optargs{:};
 
 if ~verbose
     fig = [];
@@ -261,27 +254,6 @@ if verbose
     
     % Spectrogram
     [~,~,~,fig(3)] = calc_spectrogram(t,f,field);
-end
-
-% Plot the total spectrum including pulse and ASE.
-% Unit of the ASE spectrum:
-% It is W/THz. However, to plot it with the pulse spectrum, it needs to be 
-% transformed into nJ/nm. Unlike the noisy ASE "field" added to the pulse
-% during pulse evolution (see pulse-propagation codes), the spectrometer
-% measures the "total" ASE power, irrelevant to the numerical time window.
-% Therefore, the energy of each pulse should include the ASE energy 
-% throughout one repetition time:
-%    ASE energy (J/THz) = ASE power (W/THz) * t_rep (s)
-if verbose && ~isempty(ASE)
-    fig(4) = figure('Name','Spectrum');
-    spectrum_total = spectrum.*factor + (ASE.spectrum.*ASE.t_rep*1e9).*factor; % 1e9 in the ASE term is to make it nJ
-    plot(299792.458./f(f>0),  spectrum_total(f>0),'r','linewidth',2); hold on;
-    plot(299792.458./f(f>0),spectrum(f>0).*factor(f>0),'b','linewidth',2); hold off;
-    l = legend('Pulse+ASE','Pulse'); set(l,'fontsize',16);
-    xlabel('Wavelength (nm)');
-    ylabel('Spectrum (nJ/nm)');
-    xlim([min(299792.458./f(f>0)),max(299792.458./f(f>0))]);
-    set(gca,'fontsize',16);
 end
 
 end
