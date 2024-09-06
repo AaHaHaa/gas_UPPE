@@ -16,7 +16,7 @@ sim.f0 = f0;
 sim.progress_bar_name = 'SPM';
 sim.gpuDevice.Index = 1;
 sim.pulse_centering = false;
-sim.adaptive_deltaZ.max_deltaZ = 1e-5;
+sim.adaptive_dz.max_dz = 1e-5;
 
 num_save = 50;
 fiber.L0 = 0.5; % propagation length

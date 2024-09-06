@@ -15,11 +15,11 @@ addpath('helper functions','../gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-gas_material = 'H2';
+gas_material = 'CH4';
 
-pressure = 30; % atm
+pressure = 0; % atm
 temperature = 288.15; % 15 degree Celsius
-core_radius = 33e-6; % core radius; m
+core_radius = 30e-6; % core radius; m
 
 delta = 310e-9; % m; revolver-wall thickness
 f_FEM = 2e-3; % overall fitting factor that allows us to adjust the capillary spectral loss shape to match the levels found in COMSOL
@@ -38,7 +38,7 @@ theta_sampling = 101;
 
 % (n,m) modes to solve for
 % [1,4,9,17,28,40] are the first six radial EH0m modes
-user_midx = 1;%[1,4,9,17,28,40];
+user_midx = 1:3;%[1,4,9,17,28,40];
 num_modes = length(user_midx);
 
 % refractive index

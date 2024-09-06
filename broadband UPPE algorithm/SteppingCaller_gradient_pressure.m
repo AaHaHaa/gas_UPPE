@@ -1,5 +1,5 @@
 function [A_out,...
-          save_z,save_deltaZ,...
+          save_z,save_dz,...
           T_delay_out,...
           delta_permittivity,relative_Ne] = SteppingCaller_gradient_pressure(fiber, sim, gas, gas_eqn,...
                                                                              save_z, save_points,...
@@ -15,9 +15,9 @@ Nt = size(initial_condition.fields,1);
 num_modes = size(initial_condition.fields,2);
 dt = initial_condition.dt;
 
-save_deltaZ = zeros(save_points,1);
+save_dz = zeros(save_points,1);
 T_delay_out = zeros(save_points,1);
-if sim.Raman_model ~= 0 && sim.scalar
+if sim.include_Raman && sim.scalar
     delta_permittivity = zeros(Nt,num_modes,gas_eqn.num_Raman,save_points);
 else
     delta_permittivity = []; % dummay variable for output
@@ -101,12 +101,12 @@ end
 z = 0;
 save_i = 2; % the 1st one is the initial field
 a5 = [];
-if ~isfield(sim.adaptive_deltaZ,'max_deltaZ')
-    sim.adaptive_deltaZ.max_deltaZ = sim.save_period/10;
+if ~isfield(sim.adaptive_dz,'max_dz')
+    sim.adaptive_dz.max_dz = sim.save_period/10;
 end
-sim.deltaZ = 1e-6; % m; start with a small value to avoid initial blowup
-save_deltaZ(1) = sim.deltaZ;
-sim.last_deltaZ = 1; % randomly put a number, 1, for initialization
+sim.dz = min(1e-6,sim.adaptive_dz.max_dz); % m; start with a small value to avoid initial blowup
+save_dz(1) = sim.dz;
+sim.last_dz = 1; % randomly put a number, 1, for initialization
 
 time_to_update_D = 100; D_idx = time_to_update_D;
 pressure0 = 1.01325e5; % Pa
@@ -137,8 +137,6 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
                                                      gas_pressure,eta,...
                                                      time_window,...
                                                      omegas,wavelength);
-        Raw_sponRS = Raw;
-        Rbw_sponRS = Raw;
     end
 
     % Start the steppping
@@ -154,11 +152,10 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
         end
 
         [last_A, a5,...
-         opt_deltaZ, success] = GMMNLSE_func(last_A, a5,...
+         opt_dz, success] = GMMNLSE_func(last_A, a5,...
                                              sim, gas, gas_eqn,...
                                              SK_info, SRa_info, SRb_info,...
                                              Raw, Rbw,...
-                                             Raw_sponRS, Rbw_sponRS,...
                                              D_op_upsampling,...
                                              prefactor, sponRS_prefactor,...
                                              dt, fiber.SR(1),...
@@ -167,10 +164,10 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
         if ~success
             ever_fail = true;
 
-            sim.deltaZ = opt_deltaZ;
+            sim.dz = opt_dz;
         end
     end
-    sim.last_deltaZ = sim.deltaZ; % previous deltaZ
+    sim.last_dz = sim.dz; % previous dz
     
     % Apply the damped frequency window
     last_A = last_A.*gas_eqn.damped_freq_window;
@@ -213,7 +210,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
     end
 
     % Update z
-    z = z + sim.deltaZ;
+    z = z + sim.dz;
     % Because the adaptive-step algorithm determines the step size by 
     % checking the error of the spectral intensities from RK3 and RK4, it
     % might ignore changes at the weakest part of the spectrum. This
@@ -231,21 +228,21 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
         eff_range_D = find_range_D(abs(last_A).^2,imag(D_op));
         min_beat_length = 2*pi/eff_range_D;
         if strcmp(sim.step_method,'MPA')
-            deltaZ_resolve_beat_length = min_beat_length/4*sim.MPA.M;
+            dz_resolve_beat_length = min_beat_length/4*sim.MPA.M;
         else
-            deltaZ_resolve_beat_length = min_beat_length/4;
+            dz_resolve_beat_length = min_beat_length/4;
         end
         
         D_idx = 0;
     end
     D_idx = D_idx + 1;
 
-    sim.deltaZ = min([opt_deltaZ,save_z(end)-z,sim.adaptive_deltaZ.max_deltaZ,deltaZ_resolve_beat_length]);
+    sim.dz = min([opt_dz,save_z(end)-z,sim.adaptive_dz.max_dz,dz_resolve_beat_length]);
 
     % If it's time to save, get the result from the GPU if necessary,
     % transform to the time domain, and save it
-    if z == sim.last_deltaZ
-        if sim.Raman_model ~= 0 && sim.scalar
+    if z == sim.last_dz
+        if sim.include_Raman && sim.scalar
             delta_permittivity(:,:,:,1) = calc_permittivity(sim,gas,gas_eqn,last_A,Nt);
         end
         if sim.photoionization_model ~= 0
@@ -256,15 +253,15 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
     if z >= save_z(save_i)-eps(z)
         A_out_ii = fft(last_A);
         if sim.gpu_yes
-            save_deltaZ(save_i) = gather(sim.last_deltaZ);
+            save_dz(save_i) = gather(sim.last_dz);
             save_z(save_i) = gather(z);
             A_out(:, :, save_i) = gather(A_out_ii);
         else
-            save_deltaZ(save_i) = sim.last_deltaZ;
+            save_dz(save_i) = sim.last_dz;
             save_z(save_i) = z;
             A_out(:, :, save_i) = A_out_ii;
         end
-        if sim.Raman_model ~= 0 && sim.scalar
+        if sim.include_Raman && sim.scalar
             delta_permittivity(:,:,:,save_i) = calc_permittivity(sim,gas,gas_eqn,last_A,Nt);
         end
         if sim.photoionization_model ~= 0
@@ -295,10 +292,10 @@ end
 function eff_range_D = find_range_D(spectrum,D)
 %FIND_RANGE_D
 %
-% For an adaptive-deltaZ method, the maximum deltaZ is also limited by the 
+% For an adaptive-dz method, the maximum dz is also limited by the 
 % range of the propagation constant, beta0.
 % If the FWM, Raman, or anything else happens for multiple frequencies 
-% where deltaZ can't resolve their beta0 difference, the outcome can be 
+% where dz can't resolve their beta0 difference, the outcome can be 
 % wrong.
 % Here, I multiply the (intensity)^(1/5) of the normalized spectrum to the 
 % beta0 to consider beta0 difference of the pulse and exclude those without

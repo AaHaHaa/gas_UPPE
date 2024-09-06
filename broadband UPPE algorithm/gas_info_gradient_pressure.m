@@ -44,7 +44,7 @@ if ismember(gas.gas_material,{'H2','N2','O2','air'})
     
     gas = Raman_model(gas,eta); % Obtain the Raman parameters according to the gas
 else % no Raman
-    sim.Raman_model = 0;
+    sim.include_Raman = false;
 end
 
 %% Refractive index

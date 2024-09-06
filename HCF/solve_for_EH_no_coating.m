@@ -14,7 +14,7 @@ addpath('helper functions','../gas absorption spectra/');
 
 use_gpu = false;%true; % GPU
 
-gas_material = 'N2';
+gas_material = 'CH4';
 
 pressure = 0; % atm
 temperature = 273.15 + 25; % 15 degree Celsius

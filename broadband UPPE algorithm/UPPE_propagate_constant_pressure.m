@@ -76,16 +76,16 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 %
 %       Adaptive method -->
 %
-%           adaptive_deltaZ.threshold - a scalar;
+%           adaptive_dz.threshold - a scalar;
 %                                       the accuracy used to determined whether to increase or decrease the step size.
-%           adaptive_deltaZ.max_deltaZ - a scalar; the maximum adaptive step size
+%           adaptive_dz.max_dz - a scalar; the maximum adaptive step size
 %
 %       Algorithms to use -->
 %
 %           gpu_yes - 1(true) = GPU, 0(false) = CPU
 %                     Whether or not to use the GPU. Using the GPU is HIGHLY recommended, as a speedup of 50-100x should be possible.
-%           Raman_model - 0 = ignore Raman effect
-%                         1 = include gas Raman
+%           include_Raman - 0(false) = ignore Raman effect
+%                           1(true)  = include gas Raman
 %           photoionization_model - 0 = ignore the photoionization effect
 %                                   1 = include the photoionization effect
 %                                   (Photoionization model is implemented currently in linearly-polarized single-mode scenarios.)
@@ -94,7 +94,6 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 %
 %           pulse_centering - 1(true) = center the pulse according to the time window, 0(false) = do not
 %                             The time delay will be stored in time_delay after running UPPE_propagate().
-%           num_photon_noise_per_bin - a scalar; include photon noise (typically one photon per spectral discretization bin)
 %           parallel_yes - show the simulation progress under the parallel "parfor".
 %                          The progress bar will be ignored within parfor.
 %           parallel_idx - the index of the session
@@ -130,7 +129,7 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 % foutput.fields - (N, num_modes, num_save_points) matrix with the multimode field at each save point
 % foutput.dt - time grid point spacing, to fully identify the field
 % foutput.z - the propagation length of the saved points
-% foutput.deltaZ - the step size at each saved points
+% foutput.dz - the step size at each saved points
 % foutput.betas - the [betas0,betas1] used for the moving frame
 % foutput.t_delay - the time delay of each pulse which is centered in the time window during propagation
 % foutput.seconds - time spent in the main loop
@@ -189,7 +188,7 @@ end
 % Error check on the dimensions (num_modes) of matrices
 check_nummodes(sim, fiber, initial_condition.fields);
 
-if sim.Raman_model ~= 0
+if sim.include_Raman
     Fmax = 1/2/dt;
     % Below, only the available Raman (whose preR~=0) are considered.
     % max_Omega and max_T2 are used to determine which Raman model to use (see below).
@@ -238,6 +237,9 @@ if sim.Raman_model ~= 0
     else
         gas.model = 1;
     end
+else
+    % this is to correctly compute the noise photon in spontaneous_Raman()
+    gas.model = 1;
 end
 
 %% Polarized propagation constant (betas) and X3
@@ -250,7 +252,6 @@ end
 if sim.gpu_yes
     [sim.gpuDevice.Device,...
      sim.cuda_SRSK,  sim.cuda_num_operations_SRSK,...
-     sim.cuda_sponRS,sim.cuda_num_operations_sponRS,...
      sim.cuda_MPA_psi_update] = setup_stepping_kernel(sim,gas_Nt,num_modes);
 end
 
@@ -261,7 +262,7 @@ if sim.gpu_yes
     dt = gpuArray(dt);
     time_window = gpuArray(time_window);
 end
-omegas = 2*pi*ifftshift(linspace(-floor(Nt/2), floor((Nt-1)/2), Nt))'/time_window; % in 1/ps, in the order that the fft gives
+omegas = 2*pi*ifftshift(linspace(-floor(Nt/2), floor((Nt-1)/2), Nt))'/time_window; % in 1/ps, in the order that the ifft gives
 real_omegas = (omegas + 2*pi*sim.f0)*1e12; % Hz
 
 % The dispersion term in the UPPE, in frequency space
@@ -308,32 +309,18 @@ end
  gas_eqn] = Raman_model_for_UPPE_constant_pressure(sim,gas,time_window,Nt,...
                                                    gas_Nt,gas_dt,upsampling_zeros);
 
-%% Include spontaneous Raman scattering
-sim.include_sponRS = sim.Raman_model ~= 0;
-if sim.include_sponRS
-    sponRS_prefactor = spontaneous_Raman(Nt,dt,sim,gas,gas_eqn);
-    Raw_sponRS = Raw;
-    Rbw_sponRS = Raw;
-else
-    sponRS_prefactor = []; % dummay variable due to no Raman
-    Raw_sponRS = [];
-    Rbw_sponRS = [];
-end
+% spontaneous Raman scattering
+sponRS_prefactor = spontaneous_Raman(Nt,dt,sim,gas,gas_eqn);
 
 %% Finalize a few parameters for MPA computation
 % Its size needs to be modified according to the stepping algorithm
 if isequal(sim.step_method,'MPA')
     prefactor{2} = permute(prefactor{2},[1,3,2]); % size: (Nt, M+1, num_modes)
-    if sim.include_sponRS
-        sponRS_prefactor{1} = permute(sponRS_prefactor{1},[1,3,2]); % size: (Nt, M+1, num_modes)
-    end
+    sponRS_prefactor{1} = permute(sponRS_prefactor{1},[1,3,2]); % size: (Nt, M+1, num_modes)
 end
 
 %% Work out the overlap tensor details
 [SK_info, SRa_info, SRb_info] = calc_SRSK(fiber,sim,num_spatial_modes);
-
-%% Include the shot noise: "sim.num_photon_noise_per_bin" photons per mode
-initial_condition.fields = include_shot_noise(sim,real_omegas,Nt,time_window,initial_condition.fields);
 
 %% Setup the exact save points
 % We will always save the initial condition as well
@@ -341,8 +328,8 @@ save_points = int64(num_saves_total + 1);
 save_z = double(0:save_points-1)*sim.save_period;
 
 %% Photoionization - erfi() lookup table
-% Because calculating erfi is slow, it's faster if I create a lookup table
-% and use interp1. The range of input variable for erfi is 0~sqrt(2) only.
+% Because calculating erfi() is slow, it's faster if I create a lookup table and use interp1().
+% The range of input variable for erfi is 0~sqrt(2) only.
 if sim.photoionization_model ~= 0
     n_Am = 10; % the number of summation of Am term in photoionization
     gas_eqn.erfi_x = linspace(0,sqrt(2*(n_Am+1)),1000)';
@@ -353,7 +340,7 @@ end
 run_start = tic;
 % -------------------------------------------------------------------------
 [A_out,...
- save_z,save_deltaZ,...
+ save_z,save_dz,...
  T_delay_out,...
  delta_permittivity,relative_Ne] = SteppingCaller_constant_pressure(fiber, sim, gas, gas_eqn,...
                                                                     save_z, save_points,...
@@ -361,7 +348,6 @@ run_start = tic;
                                                                     D_op, D_op_upsampling,...
                                                                     SK_info, SRa_info, SRb_info,...
                                                                     Raw, Rbw,...
-                                                                    Raw_sponRS, Rbw_sponRS,...
                                                                     prefactor, sponRS_prefactor);
 % -------------------------------------------------------------------------
 % Just to get an accurate timing, wait before recording the time
@@ -373,13 +359,13 @@ fulltime = toc(run_start);
 
 %% Save the results in a struct
 foutput = struct('z',save_z,...
-                 'deltaZ',save_deltaZ,...
+                 'dz',save_dz,...
                  'fields',A_out,...
                  'dt',initial_condition.dt,...
                  'betas',sim.betas,...
                  'seconds',fulltime,...
                  't_delay',T_delay_out);
-if sim.Raman_model ~= 0 && sim.scalar
+if sim.include_Raman && sim.scalar
     foutput.delta_permittivity = delta_permittivity;
 end
 if sim.photoionization_model ~= 0

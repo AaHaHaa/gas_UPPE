@@ -15,7 +15,7 @@ function [fiber,sim] = load_default_UPPE_propagate( input_fiber,input_sim )
 %    [fiber,sim] = load_default_UPPE_propagate(fiber,[]);
 %
 %    % If there are "sim" settings
-%    sim.Raman_model = 0;
+%    sim.include_Raman = true;
 %    [fiber,sim] =  load_default_UPPE_propagate(fiber,sim);
 %
 %    % Use only user-defined "sim", not "fiber"
@@ -102,16 +102,16 @@ function [fiber,sim] = load_default_UPPE_propagate( input_fiber,input_sim )
 %
 %       Adaptive method -->
 %
-%           adaptive_deltaZ.threshold - a scalar;
+%           adaptive_dz.threshold - a scalar;
 %                                       the accuracy used to determined whether to increase or decrease the step size.
-%           adaptive_deltaZ.max_deltaZ - a scalar; the maximum adaptive step size
+%           adaptive_dz.max_dz - a scalar; the maximum adaptive step size
 %
 %       Algorithms to use -->
 %
 %           gpu_yes - 1(true) = GPU, 0(false) = CPU
 %                     Whether or not to use the GPU. Using the GPU is HIGHLY recommended, as a speedup of 50-100x should be possible.
-%           Raman_model - 0 = ignore Raman effect
-%                         1 = include gas Raman
+%           include_Raman - 0(false) = ignore Raman effect
+%                           1(true)  = include gas Raman
 %           photoionization_model - 0 = ignore the photoionization effect
 %                                   1 = include the photoionization effect
 %                                   (Photoionization model is implemented currently in single-mode scenarios.)
@@ -120,7 +120,6 @@ function [fiber,sim] = load_default_UPPE_propagate( input_fiber,input_sim )
 %
 %           pulse_centering - 1(true) = center the pulse according to the time window, 0(false) = do not
 %                             The time delay will be stored in time_delay after running UPPE_propagate().
-%           num_photon_noise_per_bin - a scalar; include photon noise (typically one photon per spectral discretization bin)
 %           parallel_yes - show the simulation progress under the parallel "parfor".
 %                          The progress bar will be ignored within parfor.
 %           parallel_idx - the index of the session
@@ -215,24 +214,23 @@ default_sim.scalar = true;
 % Adaptive-step algorithm
 if length(default_sim.midx) == 1 % single mode
     % Threshold error for adaptive RK4IP
-    default_sim.adaptive_deltaZ.threshold = 1e-8; % the threshold of the adaptive method
-                                                  % Recommended value is less than 1e-5.
-                                                  % Values larger than 1e-3 are too large.
+    default_sim.adaptive_dz.threshold = 1e-8; % the threshold of the adaptive method
+                                              % Recommended value is less than 1e-5.
+                                              % Values larger than 1e-3 are too large.
 else % multimode
     % Threshold error for adaptive Adams-Moulton method in MPA
-    default_sim.adaptive_deltaZ.threshold = 1e-6;
+    default_sim.adaptive_dz.threshold = 1e-6;
 end
 
 % Algorithms to use
 default_sim.gpu_yes = true;
-default_sim.Raman_model = 1; % consider Raman
+default_sim.include_Raman = true; % consider Raman
 default_sim.parallel_yes = false;
 default_sim.parallel_idx = 1;
 default_sim.photoionization_model = 0;
 
 % Others
 default_sim.pulse_centering = true; % center the pulse according to the time window
-default_sim.num_photon_noise_per_bin = 1;
 default_sim.gpuDevice.Index = 1; % the gpuDevice to use
 default_sim.progress_bar = true;
 default_sim.progress_bar_name = '';

@@ -5,7 +5,7 @@ function [Raw,Rbw,...
 %computation in gases.
 %
 %   sim: a structure containing
-%       sim.Raman_model - 
+%       sim.include_Raman
 %       sim.gpu_yes
 %   gas: a structure containing
 %       gas.gas_material
@@ -19,7 +19,7 @@ function [Raw,Rbw,...
 acyclic_conv_stretch = @(x) 2*x-1;
 
 n = ceil(Nt/2);
-if sim.Raman_model ~= 0
+if sim.include_Raman
     T = (0:gas_Nt-1)'*gas_dt; % ps
     if sim.gpu_yes
         T = gpuArray(T);

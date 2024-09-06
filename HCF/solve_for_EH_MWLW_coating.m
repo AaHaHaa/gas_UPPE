@@ -14,11 +14,11 @@ addpath('helper functions','../gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-gas_material = 'Ar';
+gas_material = 'CH4';
 
-pressure = 30; % atm
+pressure = 100; % atm
 temperature = 273.15 + 25; % 25 degree Celsius
-core_radius = 100e-6; % core radius; m
+core_radius = 150e-6; % core radius; m
 
 % Don't change "wavelength"!
 num_wavelength = 1e5;
@@ -26,7 +26,7 @@ wavelength_range = [100,30e3]; % nm
 c = 299792.458; % nm/ps
 f = linspace(c/wavelength_range(1),c/wavelength_range(2),num_wavelength)'; % THz
 wavelength = c./f; % nm
-target_wavelength = 1030; % nm
+target_wavelength = 515; % nm
 
 % the number of sampling points of the spatial fields
 r_sampling = 101;

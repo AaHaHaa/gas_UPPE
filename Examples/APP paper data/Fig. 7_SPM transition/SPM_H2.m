@@ -15,7 +15,7 @@ sim.f0 = f0;
 %sim.progress_bar = false;
 sim.progress_bar_name = 'SPM';
 %sim.gpu_yes = false;
-sim.gpuDevice.Index = 2;
+sim.gpuDevice.Index = 1;
 
 num_save = 30;
 fiber.L0 = 2; % propagation length

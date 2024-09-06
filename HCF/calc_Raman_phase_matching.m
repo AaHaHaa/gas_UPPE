@@ -10,8 +10,8 @@ clearvars; close all;
 num_disp_orders = 3;
 use_gpu = false;%true;
 
-load('info_AR_HC_PCF_H2_60um_30atm_310nm.mat');
-gas_material = 'H2';
+load('info_MWLW_coating_CH4_200um_10atm.mat');
+gas_material = 'CH4';
 
 c = 2.99792458e-4; % speed of ligth; m/ps
 
@@ -19,17 +19,17 @@ Nf = size(beta,1);
 num_modes = size(beta,2);
 
 wavelength_min = 0.6; % um
-wavelength_max = 20; % um
+wavelength_max = 10; % um
 
 % Show the Stokes,pump,anti-Stokes phase matching condition 
 wavelength_pump1 = 299792.458/(299792.458/1030)/1e3; % um
 wavelength_pump2 = 299792.458/(299792.458/2000)/1e3; % um
-Stokes_shift_V = 124.38;
+Stokes_shift_V = 87.4495;%124.38;
 
 tfwhm1 = 10; % ps
-total_energy1 = 3e6; % nJ
+total_energy1 = 1e6; % nJ
 tfwhm2 = 10; % ps
-total_energy2 = 8e6; % nJ
+total_energy2 = 1e6; % nJ
 ratio_square_peak_power_to_Gaussian_peak_power = 0.939437278699651;
 peak_power1 = total_energy1*1e-9/tfwhm1/1e-12*ratio_square_peak_power_to_Gaussian_peak_power; % W
 peak_power2 = total_energy2*1e-9/tfwhm2/1e-12*ratio_square_peak_power_to_Gaussian_peak_power; % W

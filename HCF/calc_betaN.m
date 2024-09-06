@@ -7,9 +7,9 @@
 addpath('../user_helpers');
 
 num_disp_orders = 3;
-use_gpu = true;
+use_gpu = false;%true;
 
-load('info_no_coating_N2_300um_0atm.mat','beta','wavelength');
+load('info_AR_HC_PCF_CH4_60um_0atm_310nm.mat','beta','wavelength');
 
 c = 2.99792458e-4; % speed of ligth; m/ps
 

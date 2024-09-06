@@ -6,19 +6,19 @@ clearvars; close all;
 num_disp_orders = 3;
 use_gpu = false;%true;
 
-load('info_MWLW_coating_Ar_200um_30atm.mat','beta','wavelength');
+load('info_AR_HC_PCF_CH4_60um_100atm_310nm.mat','beta','wavelength');
 
 c = 2.99792458e-4; % speed of ligth; m/ps
 
 Nf = size(beta,1);
 num_modes = size(beta,2);
 
-wavelength_min = 0.5; % um
-wavelength_max = 15; % um
+wavelength_min = 0.3; % um
+wavelength_max = 2; % um
 
 % Show the Stokes,pump,anti-Stokes phase matching condition 
 wavelength_pump = 1.03; % um
-FWM_Shift = 261;
+FWM_Shift = 87.449;
 
 %% Calculate the propagation constants
 wavelength = wavelength*1e6; % um

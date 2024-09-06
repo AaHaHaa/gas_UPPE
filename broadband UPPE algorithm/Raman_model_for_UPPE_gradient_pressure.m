@@ -14,7 +14,7 @@ function gas_eqn = precalc_gas_params(sim,gas,Nt,...
 %computation in gases.
 %
 %   sim: a structure containing
-%       sim.Raman_model - 
+%       sim.include_Raman
 %       sim.gpu_yes
 %   gas: a structure containing
 %       gas.gas_material
@@ -28,7 +28,7 @@ function gas_eqn = precalc_gas_params(sim,gas,Nt,...
 acyclic_conv_stretch = @(x) 2*x-1;
 
 n = ceil(Nt/2);
-if sim.Raman_model ~= 0
+if sim.include_Raman
     switch gas.model
         case 0
             gas_eqn = struct('Nt', gas_Nt,'dt',gas_dt,...
@@ -138,7 +138,7 @@ else % decreasing gas pressure
     gas_i = find(gas_pressure_steps - gas_pressure < 0,1);
 end
 % ---------------------------------------------------------------------
-if sim.Raman_model ~= 0
+if sim.include_Raman
     % Set up some parameters for the gas Raman generation equations
     % Because the dephasing time depends on the gas pressure, Raman
     % response needs to be re-calculated.
