@@ -42,7 +42,19 @@ Feel free to ask questions here or by sending me an email (email address is in m
 ## Upgrade this code together:<br>
 If you have any other function that you think important, please point it out in Github's discussions or send me an email. For example, perhaps you would like to add more gas species. I implement with current gases just due to my own research interest.
 
-## Important notice:<br>
+## How to activate CUDA for GPU computing in MATLAB:<br>
+Typically MATLAB deals with this, but there are still come steps to follow before CUDA can really be used, especially when compiling .cu files to generate .ptx files. Below I show only steps for Windows. For linux, please search for their specific steps. I've never used Mac, so I cannot comment anything on this; some functions need to be revised for extended capabilities for Mac as far as I know.<br>
+1. Install [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
+2. Install [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/). Only **Desktop development with C++** is required. If it later says that it needs to install some other components due to the dependency issues, also install them.
+![VS installation screenshot image](VS_install.png)
+3. Add required path of Visual Studio to computer's environmental PATH; otherwise, MATLAB, during compiling .cu files, will say "cl.exe" cannot be found.
+![add PATH](add_PATH.png)
+4. Restart the computer if something is wrong. Connections between MATLAB and CUDA or Visual Studio requires restarting to be effective.
+> [!WARNING]
+> MATLAB supports only a certain version of CUDA and GPUs ([support list](https://www.mathworks.com/help/releases/R2021b/parallel-computing/gpu-support-by-release.html)). CUDA or GPU that is too old just isn't supported.
+
+
+## History:<br>
 * 5/11/2024:<br>
 I added some examples. APL Photonics data files are updated so that they can be run correctly.  
 A bug regarding SRS under gradient pressure is also fixed.  
