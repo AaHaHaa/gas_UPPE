@@ -5,6 +5,7 @@ function [A1w, dummy_a5_1,...
                                                           Raw, Rbw,...
                                                           D_op,...
                                                           prefactor, sponRS_prefactor,...
+                                                          At_noise,...
                                                           dummy_dt, dummy_inverse_Aeff)
 %STEPPING_MPA_CONSTANT_PRESSURE Take one step with MPA
 %
@@ -56,13 +57,6 @@ function [A1w, dummy_a5_1,...
 small_dz = sim.dz/sim.MPA.M; % the step size between each parallelization plane in MPA
 
 [Nt,num_modes] = size(A0w);
-
-% Spontaneous Raman scattering
-if sim.gpu_yes
-    At_noise = fft(sponRS_prefactor{1}.*sqrt(abs(randn(gas_eqn.Nt,sim.MPA.M+1,num_modes,'gpuArray'))).*exp(1i*2*pi*rand(gas_eqn.Nt,sim.MPA.M+1,num_modes,'gpuArray')));
-else
-    At_noise = fft(sponRS_prefactor{1}.*sqrt(abs(randn(gas_eqn.Nt,sim.MPA.M+1,num_modes))).*exp(1i*2*pi*rand(gas_eqn.Nt,sim.MPA.M+1,num_modes)));
-end
 
 % Upsampling to avoid frequency aliasing
 %

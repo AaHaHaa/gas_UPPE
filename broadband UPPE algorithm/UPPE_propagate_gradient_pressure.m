@@ -279,6 +279,19 @@ if sim.photoionization_model ~= 0
     gas_eqn.erfi_y = erfi(gas_eqn.erfi_x);
 end
 
+%% Create a damped frequency window to kill the peaks around the edges of the window
+sim.damped_freq_window = create_damped_freq_window(Nt);
+
+%% Modified shot-noise for noise modeling
+if isequal(sim.step_method,'RK4IP')
+    At_noise = fft(sponRS_prefactor{1}.*randn(gas_eqn.Nt,num_modes).*exp(1i*2*pi*rand(gas_eqn.Nt,num_modes)));
+else % 'MPA'
+    At_noise = repmat(fft(sponRS_prefactor{1}.*randn(gas_eqn.Nt,1,num_modes).*exp(1i*2*pi*rand(gas_eqn.Nt,1,num_modes))),1,sim.MPA.M+1,1);
+end
+if sim.gpu_yes
+    At_noise = gpuArray(At_noise);
+end
+
 %% Run the step function over each step
 run_start = tic;
 % -------------------------------------------------------------------------
@@ -290,6 +303,7 @@ run_start = tic;
                                                                     initial_condition,...
                                                                     SK_info, SRa_info, SRb_info,...
                                                                     prefactor, sponRS_prefactor,...
+                                                                    At_noise,...
                                                                     time_window,...
                                                                     omegas,wavelength,...
                                                                     gas_func);
@@ -315,5 +329,14 @@ end
 if sim.photoionization_model ~= 0
     foutput.relative_Ne = relative_Ne;
 end
+
+% Shot noise
+Aw_noise = ifft(At_noise);
+Aw_noise = permute(Aw_noise([1:gas_eqn.n,end-(Nt-gas_eqn.n-1):end],1,:),[1,3,2]);
+At_noise = fft(Aw_noise);
+if sim.gpu_yes
+    At_noise = gather(At_noise);
+end
+foutput.shot_noise = At_noise;
 
 end

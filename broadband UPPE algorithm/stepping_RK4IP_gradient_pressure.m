@@ -5,6 +5,7 @@ function [A1w,a5,...
                                                              Raw, Rbw,...
                                                              D_op,...
                                                              prefactor, sponRS_prefactor,...
+                                                             At_noise,...
                                                              dt, inverse_Aeff,...
                                                              eta)
 %STEPPING_RK4IP_GRADIENT_PRESSURE Take one step according to the UPPE, using the 
@@ -39,8 +40,6 @@ if sim.gpu_yes
 
     Ra_sponRS = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
     Rb_sponRS = complex(zeros(gas_eqn.Nt, num_modes, num_modes, 'gpuArray'));
-    
-    At_noise = fft(sponRS_prefactor{1}.*sqrt(abs(randn(gas_eqn.Nt,num_modes,'gpuArray'))).*exp(1i*2*pi*rand(gas_eqn.Nt,num_modes,'gpuArray')));
 else
     Kerr = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
     Ra = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
@@ -48,8 +47,6 @@ else
 
     Ra_sponRS = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
     Rb_sponRS = complex(zeros(gas_eqn.Nt, num_modes, num_modes));
-    
-    At_noise = fft(sponRS_prefactor{1}.*sqrt(abs(randn(gas_eqn.Nt,num_modes))).*exp(1i*2*pi*rand(gas_eqn.Nt,num_modes)));
 end
 
 % Upsampling to avoid frequency aliasing

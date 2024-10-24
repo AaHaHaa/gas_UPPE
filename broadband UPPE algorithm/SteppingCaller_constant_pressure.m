@@ -7,7 +7,8 @@ function [A_out,...
                                                                              D_op, D_op_upsampling,...
                                                                              SK_info, SRa_info, SRb_info,...
                                                                              Raw, Rbw,...
-                                                                             prefactor, sponRS_prefactor)
+                                                                             prefactor, sponRS_prefactor,...
+                                                                             At_noise)
 %STEPPINGCALLER_CONSTANT_PRESSURE It starts the pulse propagation.
 
 Nt = size(initial_condition.fields,1);
@@ -123,6 +124,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
                                              Raw, Rbw,...
                                              D_op_upsampling,...
                                              prefactor, sponRS_prefactor,...
+                                             At_noise,...
                                              dt, fiber.SR(1));
 
         if ~success
@@ -134,10 +136,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
     sim.last_dz = sim.dz; % previous dz
     
     % Apply the damped frequency window
-    last_A = last_A.*gas_eqn.damped_freq_window;
-    if ~isempty(a5) % RK4IP reuses a5 from the previous step
-        a5 = a5.*gas_eqn.damped_freq_window;
-    end
+    last_A = last_A.*sim.damped_freq_window;
     
     % Check for any NaN elements
     if any(any(isnan(last_A))) %any(isnan(last_A),'all')
