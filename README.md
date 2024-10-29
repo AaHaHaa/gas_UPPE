@@ -18,7 +18,7 @@ It is useful for simulating pulse compression in gases, Raman physics (e.g. soli
 
 3. Support both scalar and polarized scenarios, controlled with `sim.scalar=true/false`.
 4. The gas encompasses noble (`He`, `Ne`, `Ar`, `Kr`, `Xe`) and Raman-active gases (`H<sub>2</sub>`, `N<sub>2</sub>`, `O<sub>2</sub>`, `air`, and `CH<sub>4</sub>`). 
-5. Support photoionization with the PPT model. Check the supplement of https://opg.optica.org/josab/abstract.cfm?URI=josab-40-4-796.
+5. Support photoionization with the PPT model. Check the supplement of [[4]](#references-our-papers).
 6. Support Raman computations with both scalar and polarized scenarios, as well as with both vibrational and rotational Raman scattering.
 
 > [!NOTE]
@@ -56,6 +56,7 @@ Typically MATLAB deals with this, but there are still come steps to follow befor
 1. [Multimode gain](https://doi.org/10.1364/JOSAB.500586)
 2. [Raman scattering](https://doi.org/10.1063/5.0189749)
 3. [Noise modeling](https://doi.org/10.48550/arXiv.2410.20567)
+4. [LWIR generation in $H_2$](https://opg.optica.org/josab/abstract.cfm?URI=josab-40-4-796)
 
 ## History:<br>
 * 5/11/2024:<br>
