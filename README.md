@@ -17,7 +17,7 @@ It is useful for simulating pulse compression in gases, Raman physics (e.g. soli
 > Although adaptive-step-size control for RK4IP isn't new with published papers, adaptive-step-size control for MPA is new. I didn't publish a separate paper discussing this numerical scheme, which is perhaps the fastest and the most convenient numerical scheme for general multimode situations (as in step-index, graded-index, or hollow-core fibers, etc.) by far (written on 2/14/2024). The implementation detail is described in the supplement of [[1]](#references-our-papers).
 
 3. Support both scalar and polarized scenarios, controlled with `sim.scalar=true/false`.
-4. The gas encompasses noble (`He`, `Ne`, `Ar`, `Kr`, `Xe`) and Raman-active gases (`H<sub>2</sub>`, `N<sub>2</sub>`, `O<sub>2</sub>`, `air`, and `CH<sub>4</sub>`). 
+4. The gas encompasses noble (`He`, `Ne`, `Ar`, `Kr`, `Xe`) and Raman-active gases H<sub>2</sub> (`H<sub>2</sub>`, `N<sub>2</sub>`, `O<sub>2</sub>`, `air`, and `CH<sub>4</sub>`). 
 5. Support photoionization with the PPT model. Check the supplement of [[4]](#references-our-papers).
 6. Support Raman computations with both scalar and polarized scenarios, as well as with both vibrational and rotational Raman scattering.
 
