@@ -5,17 +5,16 @@ It is useful for simulating pulse compression in gases, Raman physics (e.g. soli
 
 ## Capabilities:<br>
 1. It solves the pulse propagation with
-   - RK4IP (Runge-Kutta under the interaction picture) if single-mode (http://www.sciencedirect.com/science/article/pii/S0010465512004262).
+   - [RK4IP](http://www.sciencedirect.com/science/article/pii/S0010465512004262) (Runge-Kutta under the interaction picture) if single-mode.
+   - [MPA](https://ieeexplore.ieee.org/document/8141863) (massively parallel algorithm) if multimode.
 
 > [!NOTE]
 > I know that split-step algorithm is common, but I'd like to advocate people to switch to RK4IP since RK4IP has a higher-order truncation error, which allows higher precision or larger step size (and faster simulation).
 
-   - MPA (massively parallel algorithm) if multimode (https://ieeexplore.ieee.org/document/8141863)
-
 2. Adaptive step-size control are implemented for both RK4IP and MPA, which improves the performance and allows users to be free from worrying the reliability of a simulation.
 
 > [!NOTE]
-> Although adaptive-step-size control for RK4IP isn't new with published papers, adaptive-step-size control for MPA is new. I didn't publish a separate paper discussing this numerical scheme, which is perhaps the fastest and the most convenient numerical scheme for general multimode situations (as in step-index, graded-index, or hollow-core fibers, etc.) by far (written on 2/14/2024). The implementation detail is described in the supplement of https://doi.org/10.1364/JOSAB.500586.
+> Although adaptive-step-size control for RK4IP isn't new with published papers, adaptive-step-size control for MPA is new. I didn't publish a separate paper discussing this numerical scheme, which is perhaps the fastest and the most convenient numerical scheme for general multimode situations (as in step-index, graded-index, or hollow-core fibers, etc.) by far (written on 2/14/2024). The implementation detail is described in the supplement of [[1]](#references-our-papers).
 
 3. Support both scalar and polarized scenarios, controlled with `sim.scalar=true/false`.
 4. The gas encompasses noble (`He`, `Ne`, `Ar`, `Kr`, `Xe`) and Raman-active gases (`H<sub>2</sub>`, `N<sub>2</sub>`, `O<sub>2</sub>`, `air`, and `CH<sub>4</sub>`). 
@@ -25,16 +24,16 @@ It is useful for simulating pulse compression in gases, Raman physics (e.g. soli
 > [!NOTE]
 > This package should be the world's first correct implementation of polarized Raman simulations with both vibrational and rotational Raman scattering (scalar modeling has been known for years already). Due to the connection of angular momentum for the rotational Raman scattering, it's long been unclear how rotational Raman scattering affects nonlinear processes with polarization coupling. Although there are a few prior studies, I would define them as qualitative (or not quite fully quantitative) investigations. This package is able to solve quantitatively all the nonlinear interactions, electronic and both types (vibrational and rotational) of Raman scattering. In cases other than a single linearly polarized light involved in a decently nonlinear process, polarization coupling resulting from rotational Raman scattering is strong and requires significant attention. For details of the underlying physics, please read [our open-access paper](https://doi.org/10.1063/5.0189749).
 
-7. Support the addition of spontaneous Raman scattering and input-pulse shot noise.
+7. Support noise-seeded processes, such as spontaneous Raman scattering, with [the newly-developed noise model](https://doi.org/10.48550/arXiv.2410.20567).
 8. For multimode, GPU computations (with Nvidia CUDA) is highly recommended. I have written a lot of CUDA files to speed up simulations. It is controlled by `sim.gpu_yes=true/false`.
 
 ## Notes:<br>
-For details, please read the supplement of our paper: https://doi.org/10.1063/5.0189749.  
+For details, please read the supplement of [[2]](#references-our-papers).  
 Please don't forget to cite our paper if you find this code useful in your work. I, the young and early-career researcher, need your support. Similarly, if you need help or have questions about the code, please feel free to send me an email.
 
 There is a `readme.pdf` in the `Documentations/` folder. Please find details of how to use this code in it. However, the fastest way to learn how to use this package is to learn from the examples in the `Examples/` folder.
 
-The structure of this code is developed similar to our solid-core counterpart (https://github.com/AaHaHaa/MMTools). For optimization details of multimode (transverse modes and polarization modes), please see the supplement of our paper on multimode gain fiber (https://doi.org/10.1364/JOSAB.500586).
+The structure of this code is developed similar to [our solid-core counterpart](https://github.com/AaHaHaa/MMTools). For optimization details of multimode (transverse modes and polarization modes), please see the supplement of our paper on [multimode gain fiber](https://doi.org/10.1364/JOSAB.500586).
 
 I'm Yi-Hao Chen, the author of the code and from Frank Wise's group at Cornell Applied Physics.  
 Feel free to ask questions here or by sending me an email (email address is in my paper).
@@ -53,6 +52,10 @@ Typically MATLAB deals with this, but there are still come steps to follow befor
 > [!WARNING]
 > MATLAB supports only a certain version of CUDA and GPUs ([support list](https://www.mathworks.com/help/releases/R2021b/parallel-computing/gpu-support-by-release.html)). CUDA or GPU that is too old just isn't supported.
 
+## References (our papers):<br>
+1. [Multimode gain](https://doi.org/10.1364/JOSAB.500586)
+2. [Raman scattering](https://doi.org/10.1063/5.0189749)
+3. [Noise modeling](https://doi.org/10.48550/arXiv.2410.20567)
 
 ## History:<br>
 * 5/11/2024:<br>
@@ -62,4 +65,6 @@ A bug regarding SRS under gradient pressure is also fixed.
 * 5/14/2024:<br>
 I extended the photoionization model to gases other than H2 and He.
 * 7/24/2024:<br>
-Fixed Ar n2 to the should-be correct value. See the comment in `gas_info()` for details.
+Fixed Ar $n_2$ to the should-be correct value. See the comment in `gas_info()` for details.
+* 10/29/2024:<br>
+Update the code with the newly-developed noise model with [the finally-published paper](https://doi.org/10.48550/arXiv.2410.20567).
