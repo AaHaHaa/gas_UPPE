@@ -3,9 +3,8 @@ function [A1w, dummy_a5_1,...
                                                           sim, gas, gas_eqn,...
                                                           SK_info, SRa_info, SRb_info,...
                                                           Raw, Rbw,...
-                                                          Raw_sponRS, Rbw_sponRS,...
                                                           D_op,...
-                                                          prefactor, sponRS_prefactor,...
+                                                          prefactor,...
                                                           At_noise,...
                                                           dummy_dt, dummy_inverse_Aeff,...
                                                           eta)
@@ -46,8 +45,6 @@ function [A1w, dummy_a5_1,...
 %    D.neg - dispersion term exp(-Dz) (Nt, num_modes, M+1)
 %    haw - isotropic Raman response in the frequency domain
 %    hbw - anisotropic Raman response in the frequency domain
-%
-%    sponRS_prefactor - prefactor for the spontaneous Raman scattering
 %
 %    dummy_a5_1 - unused variable
 %
@@ -102,16 +99,10 @@ for n_it = 1:sim.MPA.n_tot_max
         Kerr = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes, 'gpuArray'));
         Ra = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes, 'gpuArray'));
         Rb = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes, 'gpuArray'));
-
-        Ra_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes, 'gpuArray')); % spontaneous isotropic Raman scattering
-        Rb_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes, 'gpuArray')); % spontaneous anisotropic Raman scattering
     else
         Kerr = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes));
         Ra = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes));
         Rb = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes));
-
-        Ra_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes)); % spontaneous isotropic Raman scattering
-        Rb_sponRS = complex(zeros(gas_eqn.Nt, sim.MPA.M+1, num_modes, num_modes)); % spontaneous anisotropic Raman scattering
     end
 
     % Calculate large num_modes^4 Kerr, Ra, and Rb terms.
@@ -120,30 +111,28 @@ for n_it = 1:sim.MPA.n_tot_max
         % If using the GPU, do the computation with fast CUDA code
         if sim.scalar % scalar fields
             [Kerr,...
-             Ra,...
-             Ra_sponRS] = feval(sim.cuda_SRSK,...
-                                Kerr, Ra, Ra_sponRS,...
-                                complex(At), At_noise,...
-                                SK_info.SK, SRa_info.SRa,...
-                                SRa_info.nonzero_midx1234s,...
-                                SRa_info.beginning_nonzero, SRa_info.ending_nonzero,...
-                                sim.include_Raman,...
-                                int32(gas_eqn.Nt), sim.MPA.M+1,...
-                                num_modes,...
-                                sim.cuda_num_operations_SRSK);
+             Ra] = feval(sim.cuda_SRSK,...
+                         Kerr, Ra,...
+                         complex(At_wNoise),...
+                         SK_info.SK, SRa_info.SRa,...
+                         SRa_info.nonzero_midx1234s,...
+                         SRa_info.beginning_nonzero, SRa_info.ending_nonzero,...
+                         sim.include_Raman,...
+                         int32(gas_eqn.Nt), sim.MPA.M+1,...
+                         num_modes,...
+                         sim.cuda_num_operations_SRSK);
         else % polarized fields
             [Kerr,...
-             Ra, Rb,...
-             Ra_sponRS, Rb_sponRS] = feval(sim.cuda_SRSK,...
-                                           Kerr, Ra, Rb, Ra_sponRS, Rb_sponRS,...
-                                           complex(At), At_noise,...
-                                           SK_info.SK,   SK_info.nonzero_midx1234s,  SK_info.beginning_nonzero,  SK_info.ending_nonzero,...
-                                           SRa_info.SRa, SRa_info.nonzero_midx1234s, SRa_info.beginning_nonzero, SRa_info.ending_nonzero,...
-                                           SRb_info.SRb, SRb_info.nonzero_midx1234s, SRb_info.beginning_nonzero, SRb_info.ending_nonzero,...
-                                           sim.include_Raman, ~sim.scalar,...
-                                           int32(gas_eqn.Nt), sim.MPA.M+1,...
-                                           num_modes,...
-                                           sim.cuda_num_operations_SRSK);
+             Ra, Rb] = feval(sim.cuda_SRSK,...
+                             Kerr, Ra, Rb,...
+                             complex(At_wNoise),...
+                             SK_info.SK,   SK_info.nonzero_midx1234s,  SK_info.beginning_nonzero,  SK_info.ending_nonzero,...
+                             SRa_info.SRa, SRa_info.nonzero_midx1234s, SRa_info.beginning_nonzero, SRa_info.ending_nonzero,...
+                             SRb_info.SRb, SRb_info.nonzero_midx1234s, SRb_info.beginning_nonzero, SRb_info.ending_nonzero,...
+                             sim.include_Raman, ~sim.scalar,...
+                             int32(gas_eqn.Nt), sim.MPA.M+1,...
+                             num_modes,...
+                             sim.cuda_num_operations_SRSK);
         end
         Kerr = sum(Kerr,4);
     else
@@ -182,19 +171,9 @@ for n_it = 1:sim.MPA.n_tot_max
                     SRb_nonzero_midx34s = midx34s_sub2ind(SRb_info.nonzero_midx34s); % the corresponding linear indices of the 3rd-dimensional "num_nonzero34" above
                 end
             end
-            Ra_mn = At(:, :, SRa_info.nonzero_midx34s(1,:)).*conj(At(:, :, SRa_info.nonzero_midx34s(2,:))); % (Nt,M+1,num_nonzero34)
+            Ra_mn = At_wNoise(:, :, SRa_info.nonzero_midx34s(1,:)).*conj(At_wNoise(:, :, SRa_info.nonzero_midx34s(2,:))); % (Nt,M+1,num_nonzero34)
             if ~sim.scalar
-                Rb_mn = At(:, :, SRb_info.nonzero_midx34s(1,:)).*conj(At(:, :, SRb_info.nonzero_midx34s(2,:))); % (Nt,M+1,num_nonzero34)
-            end
-            
-            % spontaneous Raman scattering
-            Ra_mn_sponRS =      At(:, :, SRa_info.nonzero_midx34s(1,:)).*conj(At_noise(:, :, SRa_info.nonzero_midx34s(2,:))) +... % (Nt,M+1,num_nonzero34)
-                           At_noise(:, :, SRa_info.nonzero_midx34s(1,:)).*conj(     At(:, :, SRa_info.nonzero_midx34s(2,:))) +...
-                           At_noise(:, :, SRa_info.nonzero_midx34s(1,:)).*conj(At_noise(:, :, SRa_info.nonzero_midx34s(2,:)));
-            if ~sim.scalar
-                Rb_mn_sponRS =      At(:, :, SRb_info.nonzero_midx34s(1,:)).*conj(At_noise(:, :, SRb_info.nonzero_midx34s(2,:))) +... % (Nt,M+1,num_nonzero34)
-                               At_noise(:, :, SRb_info.nonzero_midx34s(1,:)).*conj(     At(:, :, SRb_info.nonzero_midx34s(2,:))) +...
-                               At_noise(:, :, SRb_info.nonzero_midx34s(1,:)).*conj(At_noise(:, :, SRb_info.nonzero_midx34s(2,:)));
+                Rb_mn = At_wNoise(:, :, SRb_info.nonzero_midx34s(1,:)).*conj(At_wNoise(:, :, SRb_info.nonzero_midx34s(2,:))); % (Nt,M+1,num_nonzero34)
             end
         end
 
@@ -216,7 +195,6 @@ for n_it = 1:sim.MPA.n_tot_max
                     idx = midx34s_sub2ind([midx3;midx4]); % the linear indices
                     idx = arrayfun(@(i) find(SRa_nonzero_midx34s==i,1), idx); % the indices connecting to the 3rd-dimensional "num_nonzero34" of Ra_mn
                     Ra(:, :, midx1, midx2) = sum(permute(SRa_info.SRa(nz_midx),[3 2 1]).*Ra_mn(:, :, idx),3);
-                    Ra_sponRS(:, :, midx1, midx2) = sum(permute(SRa_info.SRa(nz_midx),[3 2 1]).*Ra_mn_sponRS(:, :, idx),3);
                 end
                 % Rb
                 if ~sim.scalar
@@ -228,15 +206,14 @@ for n_it = 1:sim.MPA.n_tot_max
                         idx = midx34s_sub2ind([midx3;midx4]); % the linear indices
                         idx = arrayfun(@(i) find(SRb_nonzero_midx34s==i,1), idx); % the indices connecting to the 3rd-dimensional "num_nonzero34" of Rb_mn
                         Rb(:, :, midx1, midx2) = sum(permute(SRb_info.SRb(nz_midx),[3 2 1]).*Rb_mn(:, :, idx),3);
-                        Rb_sponRS(:, :, midx1, midx2) = sum(permute(SRb_info.SRb(nz_midx),[3 2 1]).*Rb_mn_sponRS(:, :, idx),3);
                     end
                 end
             end
         end
         if sim.include_Raman
-            clear Ra_mn Ra_mn_sponRS;
+            clear Ra_mn;
             if ~sim.scalar
-                clear Rb_mn Rb_mn_sponRS;
+                clear Rb_mn;
             end
         end
     end
@@ -256,26 +233,12 @@ for n_it = 1:sim.MPA.n_tot_max
                 RaAA = fft(Raw.*Ra_upsampling,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
                 RaAA = RaAA(gas_eqn.R_downsampling,:,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
                 
-                % spontaneous Raman scattering
-                Ra_sponRS = ifft(Ra_sponRS,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % zero-padding for the acyclic convolution theorem to avoid time-domain aliasing
-                Ra_sponRS = cat(1,Ra_sponRS(end-(gas_eqn.m2-1):end,:,:,:),Ra_sponRS(1:gas_eqn.m,:,:,:)); % only the (2*Nt-1) points contain useful information; others are from the zero-padding result
-
-                RaAA_sponRS = fft(Raw.*Ra_sponRS.*sponRS_prefactor{2},gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
-                RaAA_sponRS = RaAA_sponRS(gas_eqn.R_downsampling,:,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
-                
                 if ~sim.scalar % polarized fields with an anisotropic Raman contribution from rotational Raman
                     Rb_upsampling = ifft(Rb,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % zero-padding for the acyclic convolution theorem to avoid time-domain aliasing
                     Rb_upsampling = cat(1,Rb_upsampling(end-(gas_eqn.m2-1):end,:,:,:),Rb_upsampling(1:gas_eqn.m,:,:,:)); % only the (2*Nt-1) points contain useful information; others are from the zero-padding result
 
                     RbAA = fft(Rbw.*Rb_upsampling,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
                     RbAA = RbAA(gas_eqn.R_downsampling,:,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
-                    
-                    % spontaneous Raman scattering
-                    Rb_sponRS = ifft(Rb_sponRS,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % zero-padding for the acyclic convolution theorem to avoid time-domain aliasing
-                    Rb_sponRS = cat(1,Rb_sponRS(end-(gas_eqn.m2-1):end,:,:,:),Rb_sponRS(1:gas_eqn.m,:,:,:)); % only the (2*Nt-1) points contain useful information; others are from the zero-padding result
-
-                    RbAA_sponRS = fft(Rbw.*Rb_sponRS.*sponRS_prefactor{2},gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1);
-                    RbAA_sponRS = RbAA_sponRS(gas_eqn.R_downsampling,:,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
                 end
             case 1
                 Ra = ifft(Ra); % transform into the frequency domain for upsampling
@@ -283,30 +246,18 @@ for n_it = 1:sim.MPA.n_tot_max
 
                 RaAA = fft(Raw.*Ra_upsampling,gas_eqn.Nt,1).*gas_eqn.phase_shift;
                 
-                % spontaneous Raman scattering
-                Ra_sponRS = ifft(Ra_sponRS); % transform into the frequency domain for upsampling
-                Ra_sponRS = cat(1,Ra_sponRS(end-(gas_eqn.m2-1):end,:,:,:),Ra_sponRS(1:gas_eqn.n,:,:,:));
-
-                RaAA_sponRS = fft(Raw.*Ra_sponRS.*sponRS_prefactor{2},gas_eqn.Nt,1).*gas_eqn.phase_shift;
-                
                 if ~sim.scalar % polarized fields with an anisotropic Raman contribution from rotational Raman
                     Rb = ifft(Rb); % transform into the frequency domain for upsampling
                     Rb_upsampling = cat(1,Rb(end-(gas_eqn.m2-1):end,:,:,:),Rb(1:gas_eqn.n,:,:,:));
 
                     RbAA = fft(Rbw.*Rb_upsampling,gas_eqn.Nt,1).*gas_eqn.phase_shift;
-                    
-                    % spontaneous Raman scattering
-                    Rb_sponRS = ifft(Rb_sponRS); % transform into the frequency domain for upsampling
-                    Rb_sponRS = cat(1,Rb_sponRS(end-(gas_eqn.m2-1):end,:,:,:),Rb_sponRS(1:gas_eqn.n,:,:,:));
-
-                    RbAA_sponRS = fft(Rbw.*Rb_sponRS.*sponRS_prefactor{2},gas_eqn.Nt,1).*gas_eqn.phase_shift;
                 end
         end
 
         if sim.scalar
-            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum((RaAA+RaAA_sponRS).*permute(At,[1 2 4 3]),4));
+            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum(RaAA.*permute(At_wNoise,[1 2 4 3]),4));
         else % polarized fields with an anisotropic Raman contribution from rotational Raman
-            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum((RaAA+RbAA+RaAA_sponRS+RbAA_sponRS).*permute(At,[1 2 4 3]),4));
+            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum((RaAA+RbAA).*permute(At_wNoise,[1 2 4 3]),4));
         end
     else
         nonlinear = prefactor{2}.*ifft(Kerr);

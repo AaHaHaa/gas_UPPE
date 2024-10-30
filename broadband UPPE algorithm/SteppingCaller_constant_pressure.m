@@ -7,7 +7,7 @@ function [A_out,...
                                                                              D_op, D_op_upsampling,...
                                                                              SK_info, SRa_info, SRb_info,...
                                                                              Raw, Rbw,...
-                                                                             prefactor, sponRS_prefactor,...
+                                                                             prefactor,...
                                                                              At_noise)
 %STEPPINGCALLER_CONSTANT_PRESSURE It starts the pulse propagation.
 
@@ -123,7 +123,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
                                              SK_info, SRa_info, SRb_info,...
                                              Raw, Rbw,...
                                              D_op_upsampling,...
-                                             prefactor, sponRS_prefactor,...
+                                             prefactor,...
                                              At_noise,...
                                              dt, fiber.SR(1));
 
@@ -144,7 +144,14 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
               'NaN field encountered, aborting.\nReduce the step size or increase the temporal or frequency window.');
     end
 
-    % Center the pulse
+    % Center the pulse in the time window
+    % Important:
+    % In the modified shot-noise approach, the noise cannot be changed, so it needs to be translated as well.
+    % This took me more than 12 hours of debugging to realize it.
+    % Otherwise, the output field, if it has a strong frequency shift and shifts a lot in time relative to the time window, 
+    % the noise without translation cannot match with the translated field,
+    % resulting in a different noise field overlapped with the coherent pulse.
+    % This will artificially create a noisy output.
     if sim.pulse_centering
         last_A_in_time = fft(last_A);
         TCenter = floor(sum((-floor(Nt/2):floor((Nt-1)/2))'.*abs(last_A_in_time).^2,[1,2])/sum(abs(last_A_in_time).^2,[1,2]));
@@ -159,11 +166,13 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
                     a5 = ifft([a5(1+TCenter:end,:,:,:);a5(1:TCenter,:,:,:)]);
                 end
                 last_A = ifft([last_A_in_time(1+TCenter:end,:);last_A_in_time(1:TCenter,:)]);
+                At_noise = cat(1,At_noise(1+TCenter:end,:,:),At_noise(1:TCenter,:,:));
             elseif TCenter < 0
                 if ~isempty(a5) % RK4IP reuses a5 from the previous step
                     a5 = ifft([a5(end+1+TCenter:end,:,:,:);a5(1:end+TCenter,:,:,:)]);
                 end
                 last_A = ifft([last_A_in_time(end+1+TCenter:end,:);last_A_in_time(1:end+TCenter,:)]);
+                At_noise = cat(1,At_noise(end+1+TCenter:end,:,:),At_noise(1:end+TCenter,:,:));
             end
             if sim.gpu_yes
                 TCenter = gather(TCenter);

@@ -26,9 +26,9 @@ SRSK_filename = ['UPPE_nonlinear_sum' polar_str];
 
 switch SRSK_filename
     case 'UPPE_nonlinear_sum'
-        num_operations_SRSK = 3;
+        num_operations_SRSK = 2;
     case 'UPPE_nonlinear_sum_with_polarization'
-        num_operations_SRSK = 5;
+        num_operations_SRSK = 3;
 end
 
 % The number of blocks is set based on the total number of threads

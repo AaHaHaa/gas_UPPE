@@ -252,14 +252,10 @@ gas_func = Raman_model_for_UPPE_gradient_pressure();
 gas_eqn = gas_func.precalc_gas_params(sim,gas,Nt,...
                                       gas_Nt,gas_dt,upsampling_zeros);
 
-% spontaneous Raman scattering
-sponRS_prefactor = spontaneous_Raman(Nt,dt,sim,gas,gas_eqn);
-
 %% Finalize a few parameters for MPA computation
 % Its size needs to be modified according to the stepping algorithm
 if isequal(sim.step_method,'MPA')
     prefactor{2} = permute(prefactor{2},[1,3,2]); % size: (Nt, M+1, num_modes)
-    sponRS_prefactor{1} = permute(sponRS_prefactor{1},[1,3,2]); % size: (Nt, M+1, num_modes)
 end
 
 %% Work out the overlap tensor details
@@ -283,11 +279,7 @@ end
 sim.damped_freq_window = create_damped_freq_window(Nt);
 
 %% Modified shot-noise for noise modeling
-if isequal(sim.step_method,'RK4IP')
-    At_noise = fft(sponRS_prefactor{1}.*randn(gas_eqn.Nt,num_modes).*exp(1i*2*pi*rand(gas_eqn.Nt,num_modes)));
-else % 'MPA'
-    At_noise = repmat(fft(sponRS_prefactor{1}.*randn(gas_eqn.Nt,1,num_modes).*exp(1i*2*pi*rand(gas_eqn.Nt,1,num_modes))),1,sim.MPA.M+1,1);
-end
+At_noise = shot_noise(gas_Nt,gas_dt,sim,gas,gas_eqn,num_modes);
 if sim.gpu_yes
     At_noise = gpuArray(At_noise);
 end
@@ -302,7 +294,7 @@ run_start = tic;
                                                                     save_z, save_points,...
                                                                     initial_condition,...
                                                                     SK_info, SRa_info, SRb_info,...
-                                                                    prefactor, sponRS_prefactor,...
+                                                                    prefactor,...
                                                                     At_noise,...
                                                                     time_window,...
                                                                     omegas,wavelength,...
