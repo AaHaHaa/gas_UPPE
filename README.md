@@ -64,7 +64,7 @@ I added some examples. APL Photonics data files are updated so that they can be 
 A bug regarding SRS under gradient pressure is also fixed.  
 8pm (GMT-4): Extensive comments are added to examples.
 * 5/14/2024:<br>
-I extended the photoionization model to gases other than H2 and He.
+I extended the photoionization model to gases other than H<sub>2</sub> and He.
 * 7/24/2024:<br>
 Fixed Ar $n_2$ to the should-be correct value. See the comment in `gas_info()` for details.
 * 10/29/2024:<br>
