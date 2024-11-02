@@ -73,9 +73,9 @@ Source: "Examples\SSFS (use anti-resonant fiber)"
 
 - **Transient Stokes generation**  
 The pulse undergoes Transient Raman Stokes generation in H<sub>2</sub>. If there is only one pulse, the transient Raman generation is the strongest at the trailing edge, limiting the generation efficiency to around 50%. If there are two pulses, the first "stronger" pulse will generate Stokes earlier, whose interfered temporal spikes "impulsively" drives the long-lasting index wave, further driving the Stokes generation in the second pulse. The second pulse thus undergoes Stokes generation throughout its entire pulse.  
-The long-lasting index wave doesn't need to be super strong to drive the second-pulse Stokes generation, so it isn't clear in the figure. However, we can clearly see that, compared with the single-pulse Stokes generation, the double-pulse generation efficiently creates a Stokes signal throughout the entire pump pulse.
+The long-lasting index wave doesn't need to be super strong to drive the second-pulse Stokes generation, so it isn't clear in the figure. However, we can clearly see that, compared with the single-pulse Stokes generation, the double-pulse generation efficiently creates a Stokes signal throughout the entire pump pulse.  
 Source: "Examples\Stokes generation (use capillary)"  
-<img src="Readme_images/Stokes_generation.gif" width=50%>
+<img src="Readme_images/Stokes_generation.gif" width=90%>
 
 ## History:<br>
 * 5/11/2024:<br>
