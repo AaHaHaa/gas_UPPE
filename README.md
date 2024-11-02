@@ -45,9 +45,9 @@ If you have any other function that you think important, please point it out in 
 Typically MATLAB deals with this, but there are still come steps to follow before CUDA can really be used, especially when compiling .cu files to generate .ptx files. Below I show only steps for Windows. For linux, please search for their specific steps. I've never used Mac, so I cannot comment anything on this; some functions need to be revised for extended capabilities for Mac as far as I know.<br>
 1. Install [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
 2. Install [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/). Only **Desktop development with C++** is required. If it later says that it needs to install some other components due to the dependency issues, also install them.
-![VS installation screenshot image](VS_install.png)
+![VS installation screenshot](Readme_images/VS_install.png)
 3. Add required path of Visual Studio to computer's environmental PATH; otherwise, MATLAB, during compiling .cu files, will say "cl.exe" cannot be found.
-![add PATH](add_PATH.png)
+![add PATH screenshot](Readme_images/add_PATH.png)
 4. Restart the computer if something is wrong. Connections between MATLAB and CUDA or Visual Studio requires restarting to be effective.
 > [!WARNING]
 > MATLAB supports only a certain version of CUDA and GPUs ([support list](https://www.mathworks.com/help/releases/R2021b/parallel-computing/gpu-support-by-release.html)). CUDA or GPU that is too old just isn't supported.
@@ -57,6 +57,18 @@ Typically MATLAB deals with this, but there are still come steps to follow befor
 2. [Raman scattering](https://doi.org/10.1063/5.0189749)
 3. [Noise modeling](https://doi.org/10.48550/arXiv.2410.20567)
 4. [LWIR generation in H<sub>2</sub>](https://opg.optica.org/josab/abstract.cfm?URI=josab-40-4-796)
+
+## Demonstrations:<br>
+- **Soliton self-compression**  
+The pulse undergoes soliton self-compression, creating an ultrashort temporal peak. When the pulse shrinks in time, the sharp peak "impulsively" excites any Raman whose variation rate is slower than the pulse, i.e. those Raman have smaller transition frequencies.  
+Source: "Examples\Soliton compression (use anti-resonant fiber)"  
+<img src="Readme_images/soliton_compression.gif" width=45%><img src="Readme_images/soliton_compression_index.gif" width=45%>
+
+- **Polarized soliton self-frequency shift (SSFS)**  
+The pulse undergoes soliton self-frequency shift, where the pulse redshifts continuously due to intrapulse Raman scattering.  
+In the examples here, I demonstrate with incident pulse with either (left) linear polarization or (right) circular polarization. Because circularly-polarized stimulated Raman scattering exhibits a Raman gain that doesn't suffer from any four-wave-mixing gain suppression, its strength can be even 100 times larger than the linearly-polarized gain-suppressed one. This strong Raman-induced polarization coupling deteriorates the SSFS (see [[2]](#references-our-papers) for details). 
+Source: "Examples\SSFS (use anti-resonant fiber)"  
+<img src="Readme_images/SSFS_linear.gif" width=45%><img src="Readme_images/SSFS_circular.gif" width=45%>
 
 ## History:<br>
 * 5/11/2024:<br>
