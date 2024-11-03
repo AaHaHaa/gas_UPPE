@@ -60,14 +60,14 @@ Typically MATLAB deals with this, but there are still come steps to follow befor
 
 ## Demonstrations:<br>
 - **Soliton self-compression**  
-The pulse undergoes soliton self-compression in H<sub>2</sub>, creating an ultrashort temporal peak. When the pulse shrinks in time, the sharp peak "impulsively" excites any Raman whose variation rate is slower than the pulse, i.e. those Raman have smaller transition frequencies. Because typically rotational Raman has a smaller transition frequency, it is impulsively excited earlier than the vibrational one here until the pulse keeps shortening before its variation rate.  
+The pulse undergoes soliton self-compression in H<sub>2</sub>, creating an ultrashort temporal peak. When the pulse shrinks in time, the sharp peak "impulsively" excites any Raman whose variation rate is slower than the pulse, i.e. those Raman have smaller transition frequencies. Because typically rotational Raman has a smaller transition frequency, it is impulsively excited earlier than the vibrational one here. Vibrational Raman-induced index is impulsively excited after the pulse duration keeps reducing such that the pulse temporal variation rate is higher than the Raman index change rate.  
 Source: "Examples\Soliton compression (use anti-resonant fiber)"  
 <img src="Readme_images/soliton_compression.gif" width=45%><img src="Readme_images/soliton_compression_index.gif" width=45%>
 
 - **Polarized soliton self-frequency shift (SSFS)**  
 After soliton fission into many solitons, the pulse undergoes soliton self-frequency shift in H<sub>2</sub>, where the pulse redshifts continuously due to intrapulse Raman scattering.  
-In the examples here, I demonstrate with incident pulse in either (left) linear polarization or (right) circular polarization. Because circularly-polarized stimulated Raman scattering exhibits a Raman gain that doesn't suffer from any four-wave-mixing gain suppression, its strength can be even 100 times larger than the linearly-polarized gain-suppressed one. This strong Raman-induced polarization coupling deteriorates the SSFS (see [[2]](#references-our-papers) for details).  
-Here, the linearly-polarized case can redshift up to almost 1800 nm, while the circularly-polarized one undergoes something more like a spectral broadening, rather than a clean spectral shift of a pulse.  
+In the examples here, I demonstrate with incident pulse in either (left) linear polarization or (right) circular polarization. Because cross-circularly-polarized stimulated Raman scattering exhibits a Raman gain that doesn't suffer from any four-wave-mixing gain suppression, its strength can be even 100 times larger than the cross-linearly-polarized gain-suppressed one. This strong Raman-induced polarization coupling deteriorates the SSFS (see [[2]](#references-our-papers) for details).  
+Here, the linearly-polarized case can redshift up to almost 1800 nm, while the circularly-polarized one undergoes something more like spectral broadening, rather than a clean spectral shift of a pulse.  
 Source: "Examples\SSFS (use anti-resonant fiber)"  
 <img src="Readme_images/SSFS_linear.gif" width=45%><img src="Readme_images/SSFS_circular.gif" width=45%>
 
