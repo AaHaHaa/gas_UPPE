@@ -21,5 +21,5 @@ plot(eta,rot_T2,'linewidth',2,'LineStyle','-','Color','r');
 set(gca,'YColor','r','fontsize',20);
 ylabel('Dephasing time (ps)');
 legend('Vib','Rot');
-xlim([0,30]);
+xlim([0,150]);
 %print('dephasing time.pdf','-dpdf');
