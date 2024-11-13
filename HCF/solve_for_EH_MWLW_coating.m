@@ -14,11 +14,11 @@ addpath('helper functions','../gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-gas_material = 'CH4';
+gas_material = 'Ar';
 
-pressure = 100; % atm
+pressure = 0; % atm
 temperature = 273.15 + 25; % 25 degree Celsius
-core_radius = 150e-6; % core radius; m
+core_radius = 250e-6; % core radius; m
 
 % Don't change "wavelength"!
 num_wavelength = 1e5;
@@ -34,7 +34,7 @@ theta_sampling = 101;
 
 % (n,m) modes to solve for
 % [1,4,9,17,28,40] are the first six radial EH0m modes
-user_midx = 1;%[1,4,9,17,28,40];
+user_midx = [1,4,9];%[1,4,9,17,28,40];
 num_modes = length(user_midx);
 
 % refractive index
@@ -318,7 +318,9 @@ end
 
 %% Mode-field diameter
 SR = calc_SR_tensors(mode_profiles,r,dr,dtheta,struct('gpu_yes',use_gpu),'./');
-fprintf('MFD=%4.2f um\n',sqrt(1/SR/pi)*2*1e6);
+for midx = 1:num_modes
+    fprintf('MFD=%4.2f um\n',sqrt(1/SR(midx,midx,midx,midx)/pi)*2*1e6);
+end
 
 %% Save data
 r = squeeze(r);

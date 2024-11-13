@@ -6,7 +6,7 @@ clearvars; close all;
 num_disp_orders = 3;
 use_gpu = false;%true;
 
-load('info_AR_HC_PCF_CH4_60um_100atm_310nm.mat','beta','wavelength');
+load('info_MWLW_coating_Ar_300um_25atm.mat','beta','wavelength');
 
 c = 2.99792458e-4; % speed of ligth; m/ps
 

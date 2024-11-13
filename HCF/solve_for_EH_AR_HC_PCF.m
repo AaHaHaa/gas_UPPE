@@ -15,13 +15,13 @@ addpath('helper functions','../gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-gas_material = 'CH4';
+gas_material = 'N2';
 
-pressure = 0; % atm
+pressure = 100; % atm
 temperature = 288.15; % 15 degree Celsius
-core_radius = 30e-6; % core radius; m
+core_radius = 15e-6; % core radius; m
 
-delta = 310e-9; % m; revolver-wall thickness
+delta = 300e-9; % m; revolver-wall thickness
 f_FEM = 2e-3; % overall fitting factor that allows us to adjust the capillary spectral loss shape to match the levels found in COMSOL
 
 % Wavelength sampling for the propagation constant and the loss
@@ -38,7 +38,7 @@ theta_sampling = 101;
 
 % (n,m) modes to solve for
 % [1,4,9,17,28,40] are the first six radial EH0m modes
-user_midx = 1:3;%[1,4,9,17,28,40];
+user_midx = 1;%[1,4,9,17,28,40];
 num_modes = length(user_midx);
 
 % refractive index
@@ -350,7 +350,9 @@ end
 
 %% Mode-field diameter
 SR = calc_SR_tensors(mode_profiles,r,dr,dtheta,struct('gpu_yes',use_gpu),'./');
-fprintf('MFD=%4.2f um\n',sqrt(1/SR/pi)*2*1e6);
+for midx = 1:num_modes
+    fprintf('MFD=%4.2f um\n',sqrt(1/SR(midx,midx,midx,midx)/pi)*2*1e6);
+end
 
 %% Save data
 r = squeeze(r);
