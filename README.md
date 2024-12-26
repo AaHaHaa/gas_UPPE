@@ -41,6 +41,9 @@ Feel free to ask questions here or by sending me an email (email address is in m
 ## Upgrade this code together:<br>
 If you have any other function that you think important, please point it out in Github's discussions or send me an email. For example, perhaps you would like to add more gas species. I implement with current gases just due to my own research interest.
 
+## Fourier-Transform tutorial
+Since I've seen many misuse of Fourier Transform, I wrote [this tutorial](Readme_images/Fourier_Transform_tutorial.pdf). Please take a look. Briefly speaking for one misuse, it's necessary to use MATLAB's `ifft` for Fourier Transform into the spectral domain.
+
 ## How to activate CUDA for GPU computing in MATLAB:<br>
 Typically MATLAB deals with this, but there are still come steps to follow before CUDA can really be used, especially when compiling .cu files to generate .ptx files. Below I show only steps for Windows. For linux, please search for their specific steps. I've never used Mac, so I cannot comment anything on this; some functions need to be revised for extended capabilities for Mac as far as I know.<br>
 1. Install [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
