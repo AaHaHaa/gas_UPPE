@@ -379,9 +379,9 @@ if sim.photoionization_model ~= 0
 end
 
 % Shot noise
-Aw_noise = ifft(At_noise);
+Aw_noise = ifft(At_noise,[],1);
 Aw_noise = permute(Aw_noise([1:gas_eqn.n,end-(Nt-gas_eqn.n-1):end],1,:),[1,3,2]);
-At_noise = fft(Aw_noise);
+At_noise = fft(Aw_noise,[],1);
 if sim.gpu_yes
     At_noise = gather(At_noise);
 end

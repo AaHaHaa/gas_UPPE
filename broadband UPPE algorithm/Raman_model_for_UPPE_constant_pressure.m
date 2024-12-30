@@ -81,8 +81,8 @@ if sim.include_Raman
                     R = gas.CH4.V.preR.*exp(-T/gas.CH4.V.T2).*exp(1i*gas.CH4.V.omega.*T)*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
             end
             R(isnan(R)) = 0; % in case that some T2=0 such that -T/T2 has a 0/0 term (this happens when the gas pressure is zero)
-            gas_eqn.R_delta_permittivity = ifft(R); % Raman-induced permittivity change
-            Rw = ifft(imag(R)); % Raman response; only "sin()" part matters in Raman computations
+            gas_eqn.R_delta_permittivity = ifft(R,[],1); % Raman-induced permittivity change
+            Rw = ifft(imag(R),[],1); % Raman response; only "sin()" part matters in Raman computations
     end
     clear T upsampling_zeros R;
     

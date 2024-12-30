@@ -88,7 +88,7 @@ for n_it = 1:sim.MPA.n_tot_max
     %    A_w = D.pos*psi
     Aw = permute(D.pos.*psi, [1 3 2]); % (Nt, M+1, num_modes)
     % Calculate A(t,z) at all z
-    At = fft(Aw);
+    At = fft(Aw,[],1);
     At_wNoise = At + At_noise;
 
     % Calculate Kerr, SRa, and SRb terms
@@ -241,13 +241,13 @@ for n_it = 1:sim.MPA.n_tot_max
                     RbAA = RbAA(gas_eqn.R_downsampling,:,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
                 end
             case 1
-                Ra = ifft(Ra); % transform into the frequency domain for upsampling
+                Ra = ifft(Ra,[],1); % transform into the frequency domain for upsampling
                 Ra_upsampling = cat(1,Ra(end-(gas_eqn.m2-1):end,:,:,:),Ra(1:gas_eqn.n,:,:,:));
 
                 RaAA = fft(Raw.*Ra_upsampling,gas_eqn.Nt,1).*gas_eqn.phase_shift;
                 
                 if ~sim.scalar % polarized fields with an anisotropic Raman contribution from rotational Raman
-                    Rb = ifft(Rb); % transform into the frequency domain for upsampling
+                    Rb = ifft(Rb,[],1); % transform into the frequency domain for upsampling
                     Rb_upsampling = cat(1,Rb(end-(gas_eqn.m2-1):end,:,:,:),Rb(1:gas_eqn.n,:,:,:));
 
                     RbAA = fft(Rbw.*Rb_upsampling,gas_eqn.Nt,1).*gas_eqn.phase_shift;
@@ -255,12 +255,12 @@ for n_it = 1:sim.MPA.n_tot_max
         end
 
         if sim.scalar
-            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum(RaAA.*permute(At_wNoise,[1 2 4 3]),4));
+            nonlinear = prefactor{2}.*ifft(Kerr,[],1) + ifft(sum(RaAA.*permute(At_wNoise,[1 2 4 3]),4),[],1);
         else % polarized fields with an anisotropic Raman contribution from rotational Raman
-            nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum((RaAA+RbAA).*permute(At_wNoise,[1 2 4 3]),4));
+            nonlinear = prefactor{2}.*ifft(Kerr,[],1) + ifft(sum((RaAA+RbAA).*permute(At_wNoise,[1 2 4 3]),4),[],1);
         end
     else
-        nonlinear = prefactor{2}.*ifft(Kerr);
+        nonlinear = prefactor{2}.*ifft(Kerr,[],1);
     end
     
     % Finalize by multiplying with the prefactor

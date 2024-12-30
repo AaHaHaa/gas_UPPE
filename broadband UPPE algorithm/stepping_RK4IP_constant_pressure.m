@@ -172,7 +172,7 @@ function dAdz = N_op(Aw,...
                      inverse_Aeff, dt)
 %N_op Calculate dAdz
 
-At = fft(Aw);
+At = fft(Aw,[],1);
 At_wNoise = At + At_noise;
 
 % Calculate large num_modes^4 Kerr, Ra, and Rb terms.
@@ -307,13 +307,13 @@ if sim.include_Raman
                 RbAA = RbAA(gas_eqn.R_downsampling,:,:).*gas_eqn.phase_shift_acyclic; % select only the valid part
             end
         case 1
-            Ra = ifft(Ra); % transform into the frequency domain for upsampling
+            Ra = ifft(Ra,[],1); % transform into the frequency domain for upsampling
             Ra_upsampling = cat(1,Ra(end-(gas_eqn.m2-1):end,:,:),Ra(1:gas_eqn.n,:,:));
             
             RaAA = fft(Raw.*Ra_upsampling,gas_eqn.Nt,1).*gas_eqn.phase_shift;
             
             if ~sim.scalar % polarized fields with an anisotropic Raman contribution from rotational Raman
-                Rb = ifft(Rb); % transform into the frequency domain for upsampling
+                Rb = ifft(Rb,[],1); % transform into the frequency domain for upsampling
                 Rb_upsampling = cat(1,Rb(end-(gas_eqn.m2-1):end,:,:),Rb(1:gas_eqn.n,:,:));
 
                 RbAA = fft(Rbw.*Rb_upsampling,gas_eqn.Nt,1).*gas_eqn.phase_shift;
@@ -321,12 +321,12 @@ if sim.include_Raman
     end
     
     if sim.scalar
-        nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum(RaAA.*permute(At_wNoise,[1 3 2]),3));
+        nonlinear = prefactor{2}.*ifft(Kerr,[],1) + ifft(sum(RaAA.*permute(At_wNoise,[1 3 2]),3),[],1);
     else % polarized fields with an anisotropic Raman contribution from rotational Raman
-        nonlinear = prefactor{2}.*ifft(Kerr) + ifft(sum((RaAA+RbAA).*permute(At_wNoise,[1 3 2]),3));
+        nonlinear = prefactor{2}.*ifft(Kerr,[],1) + ifft(sum((RaAA+RbAA).*permute(At_wNoise,[1 3 2]),3),[],1);
     end
 else
-    nonlinear = prefactor{2}.*ifft(Kerr);
+    nonlinear = prefactor{2}.*ifft(Kerr,[],1);
 end
 
 if sim.photoionization_model
@@ -337,7 +337,7 @@ if sim.photoionization_model
     
     inverse_A2 = abs(At).^2;
     inverse_A2(inverse_A2<max(inverse_A2)/1e5) = max(inverse_A2)/1e5;
-    nonlinear_photoionization = prefactor{3}.*ifft(Ne.*At) + prefactor{4}.*ifft(DNeDt./inverse_A2.*At);
+    nonlinear_photoionization = prefactor{3}.*ifft(Ne.*At,[],1) + prefactor{4}.*ifft(DNeDt./inverse_A2.*At,[],1);
 else
     nonlinear_photoionization = 0;
 end

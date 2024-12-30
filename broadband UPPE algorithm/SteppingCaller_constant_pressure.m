@@ -35,7 +35,7 @@ if sim.pulse_centering
     temporal_profile(temporal_profile<max(temporal_profile,[],1)/10) = 0;
     TCenter = floor(sum((-floor(Nt/2):floor((Nt-1)/2))'.*temporal_profile,[1,2])/sum(temporal_profile,[1,2]));
     % Because circshift is slow on GPU, I discard it.
-    %last_result = ifft(circshift(initial_condition.fields,-tCenter));
+    %last_result = ifft(circshift(initial_condition.fields,-tCenter),[],1);
     if TCenter ~= 0
         if TCenter > 0
             initial_condition.fields = [initial_condition.fields(1+TCenter:end,:);initial_condition.fields(1:TCenter,:)];
@@ -60,7 +60,7 @@ A_out = zeros(Nt, num_modes, save_points);
 % Start by saving the initial condition
 A_out(:,:,1) = initial_condition.fields;
 
-last_A = ifft(initial_condition.fields);
+last_A = ifft(initial_condition.fields,[],1);
 if sim.gpu_yes
     last_A = gpuArray(last_A);
 end
@@ -155,27 +155,27 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
     % resulting in a different noise field overlapped with the coherent pulse.
     % This will artificially create a noisy output.
     if sim.pulse_centering
-        last_A_in_time = fft(last_A);
+        last_A_in_time = fft(last_A,[],1);
         temporal_profile = abs(last_A_in_time).^2;
         temporal_profile(temporal_profile<max(temporal_profile,[],1)/10) = 0;
         TCenter = floor(sum((-floor(Nt/2):floor((Nt-1)/2))'.*temporal_profile,[1,2])/sum(temporal_profile,[1,2]));
         % Because circshift is slow on GPU, I discard it.
-        %last_result = ifft(circshift(last_A_in_time,-tCenter));
+        %last_result = ifft(circshift(last_A_in_time,-tCenter),[],1);
         if TCenter ~= 0
             if ~isempty(a5) % RK4IP reuses a5 from the previous step
-                a5 = fft(a5);
+                a5 = fft(a5,[],1);
             end
             if TCenter > 0
                 if ~isempty(a5) % RK4IP reuses a5 from the previous step
-                    a5 = ifft([a5(1+TCenter:end,:,:,:);a5(1:TCenter,:,:,:)]);
+                    a5 = ifft([a5(1+TCenter:end,:,:,:);a5(1:TCenter,:,:,:)],[],1);
                 end
-                last_A = ifft([last_A_in_time(1+TCenter:end,:);last_A_in_time(1:TCenter,:)]);
+                last_A = ifft([last_A_in_time(1+TCenter:end,:);last_A_in_time(1:TCenter,:)],[],1);
                 At_noise = cat(1,At_noise(1+TCenter:end,:,:),At_noise(1:TCenter,:,:));
             elseif TCenter < 0
                 if ~isempty(a5) % RK4IP reuses a5 from the previous step
-                    a5 = ifft([a5(end+1+TCenter:end,:,:,:);a5(1:end+TCenter,:,:,:)]);
+                    a5 = ifft([a5(end+1+TCenter:end,:,:,:);a5(1:end+TCenter,:,:,:)],[],1);
                 end
-                last_A = ifft([last_A_in_time(end+1+TCenter:end,:);last_A_in_time(1:end+TCenter,:)]);
+                last_A = ifft([last_A_in_time(end+1+TCenter:end,:);last_A_in_time(1:end+TCenter,:)],[],1);
                 At_noise = cat(1,At_noise(end+1+TCenter:end,:,:),At_noise(1:end+TCenter,:,:));
             end
             if sim.gpu_yes
@@ -217,12 +217,12 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
             delta_permittivity(:,:,:,1) = calc_permittivity(sim,gas,gas_eqn,last_A,Nt);
         end
         if sim.photoionization_model ~= 0
-            A_out_ii = fft(last_A);
+            A_out_ii = fft(last_A,[],1);
             relative_Ne(:,:,1) = calc_Ne(A_out_ii, dt, fiber.SR(1), gas, gas_eqn, sim);
         end
     end
     if z >= save_z(save_i)-eps(z)
-        A_out_ii = fft(last_A);
+        A_out_ii = fft(last_A,[],1);
         if sim.gpu_yes
             save_dz(save_i) = gather(sim.last_dz);
             save_z(save_i) = gather(z);
@@ -291,15 +291,15 @@ if sim.ellipticity == 0 % linear polarization
     gas_eqn.R_delta_permittivity(:,1:2:end) = gas_eqn.R_delta_permittivity(:,1:2:end)*4;
 end
 
-A_t_upsampling = fft(cat(1,A_w(1:gas_eqn.n,:),gas_eqn.upsampling_zeros,A_w(gas_eqn.n+1:end,:)));
+A_t_upsampling = fft(cat(1,A_w(1:gas_eqn.n,:),gas_eqn.upsampling_zeros,A_w(gas_eqn.n+1:end,:)),[],1);
 
 R_delta_permittivity = permute(gas_eqn.R_delta_permittivity,[1,3,2]); % make it [Nt,num_modes,Raman_type]; The Raman_type dimension are R and V
 switch gas.model
     case 0
-        delta_permittivity = fft(R_delta_permittivity.*ifft(abs(A_t_upsampling).^2, gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1));
+        delta_permittivity = fft(R_delta_permittivity.*ifft(abs(A_t_upsampling).^2, gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1),[],1);
         delta_permittivity = delta_permittivity(gas_eqn.R_downsampling,:,:);
     case 1
-        delta_permittivity = fft(R_delta_permittivity.*ifft(abs(A_t_upsampling).^2));
+        delta_permittivity = fft(R_delta_permittivity.*ifft(abs(A_t_upsampling).^2,[],1),[],1);
 end
 % Below follows the computational order as the electric field; however,
 % it creates strong aliasing during the second "fft()" operation due to the
@@ -318,8 +318,8 @@ end
 % downsampling. Therefore, only with an integer spectral downsampling
 % ratio, both downsampling can be done in the order of temporal-then-
 % spectral, downsampling.
-%delta_permittivity = ifft(delta_permittivity).*(permute(max(max(real(sim.mode_profiles.mode_profiles),[],1),[],2),[1,3,2])./mean(sim.mode_profiles.norms,1)).^2; % find the max delta_permittivity of each mode
-%delta_permittivity = fft(delta_permittivity([1:gas_eqn.n,gas_eqn.Nt-(Nt-gas_eqn.n-1):gas_eqn.Nt],:,:)); % transform back to time domain
+%delta_permittivity = ifft(delta_permittivity,[],1).*(permute(max(max(real(sim.mode_profiles.mode_profiles),[],1),[],2),[1,3,2])./mean(sim.mode_profiles.norms,1)).^2; % find the max delta_permittivity of each mode
+%delta_permittivity = fft(delta_permittivity([1:gas_eqn.n,gas_eqn.Nt-(Nt-gas_eqn.n-1):gas_eqn.Nt],:,:),[],1); % transform back to time domain
 
 delta_permittivity = delta_permittivity(1:floor(gas_eqn.Nt/Nt):end,:,:).*(permute(max(max(real(sim.mode_profiles.mode_profiles),[],1),[],2),[1,3,2])./mean(sim.mode_profiles.norms,1)).^2; % find the max delta_permittivity of each mode
 
