@@ -3,7 +3,7 @@ This is the shared package to simulate pulse propagation in a gas-filled hollow-
 
 It is useful for simulating pulse compression in gases, Raman physics (e.g. soliton self-frequency shift, Raman generation, or multidimensional solitary state generation), and photoionization-induced blueshift, etc.
 
-## Capabilities:<br>
+## Capabilities:
 1. It solves the pulse propagation with
    - [RK4IP](http://www.sciencedirect.com/science/article/pii/S0010465512004262) (Runge-Kutta under the interaction picture) if single-mode.
    - [MPA](https://ieeexplore.ieee.org/document/8141863) (massively parallel algorithm) if multimode.
@@ -27,24 +27,10 @@ It is useful for simulating pulse compression in gases, Raman physics (e.g. soli
 7. Support noise-seeded processes, such as spontaneous Raman scattering, with [the newly-developed noise model](https://doi.org/10.48550/arXiv.2410.20567).
 8. For multimode, GPU computations (with Nvidia CUDA) is highly recommended. I have written a lot of CUDA files to speed up simulations. It is controlled by `sim.gpu_yes=true/false`.
 
-## Notes:<br>
-For details, please read the supplement of [[2]](#references-our-papers).  
-Please don't forget to cite our paper if you find this code useful in your work. I, the young and early-career researcher, need your support. Similarly, if you need help or have questions about the code, please feel free to send me an email.
-
-There is a `readme.pdf` in the `Documentations/` folder. Please find details of how to use this code in it. However, the fastest way to learn how to use this package is to learn from the examples in the `Examples/` folder.
-
-The structure of this code is developed similar to [our solid-core counterpart](https://github.com/AaHaHaa/MMTools). For optimization details of multimode (transverse modes and polarization modes), please see the supplement of our paper on [multimode gain fiber](https://doi.org/10.1364/JOSAB.500586).
-
-I'm Yi-Hao Chen, the author of the code and from Frank Wise's group at Cornell Applied Physics.  
-Feel free to ask questions here or by sending me an email (email address is in my paper).
-
-## Upgrade this code together:<br>
-If you have any other function that you think important, please point it out in Github's discussions or send me an email. For example, perhaps you would like to add more gas species. I implement with current gases just due to my own research interest.
-
 ## Fourier-Transform tutorial
 Since I've seen many misuse of Fourier Transform, I wrote [this tutorial](Readme_images/Fourier_Transform_tutorial.pdf). Please take a look. Briefly speaking for one misuse, it's necessary to use MATLAB's `ifft` for Fourier Transform into the spectral domain.
 
-## How to activate CUDA for GPU computing in MATLAB:<br>
+## How to activate CUDA for GPU computing in MATLAB:
 Typically MATLAB deals with this, but there are still come steps to follow before CUDA can really be used, especially when compiling .cu files to generate .ptx files. Below I show only steps for Windows. For linux, please search for their specific steps. I've never used Mac, so I cannot comment anything on this; some functions need to be revised for extended capabilities for Mac as far as I know.<br>
 1. Install [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
 2. Install [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/). Only **Desktop development with C++** is required. If it later says that it needs to install some other components due to the dependency issues, also install them.
@@ -55,13 +41,13 @@ Typically MATLAB deals with this, but there are still come steps to follow befor
 > [!WARNING]
 > MATLAB supports only a certain version of CUDA and GPUs ([support list](https://www.mathworks.com/help/releases/R2021b/parallel-computing/gpu-support-by-release.html)). CUDA or GPU that is too old just isn't supported.
 
-## References (our papers):<br>
+## References (our papers):
 1. [Multimode gain](https://doi.org/10.1364/JOSAB.500586)
 2. [Raman scattering](https://doi.org/10.1063/5.0189749)
 3. [Noise modeling](https://doi.org/10.48550/arXiv.2410.20567)
 4. [LWIR generation in H<sub>2</sub>](https://opg.optica.org/josab/abstract.cfm?URI=josab-40-4-796)
 
-## Demonstrations:<br>
+## Demonstrations:
 - **Soliton self-compression**  
 The pulse undergoes soliton self-compression in H<sub>2</sub>, creating an ultrashort temporal peak. When the pulse shrinks in time, the sharp peak "impulsively" excites any Raman whose variation rate is slower than the pulse, i.e. those Raman have smaller transition frequencies. Because typically rotational Raman has a smaller transition frequency, it is impulsively excited earlier than the vibrational one here. Vibrational Raman-induced index is impulsively excited after the pulse duration keeps reducing such that the pulse temporal variation rate is higher than the Raman index change rate.  
 Source: "Examples\Soliton compression (use anti-resonant fiber)"  
@@ -80,7 +66,19 @@ The long-lasting index wave doesn't need to be super strong to drive the second-
 Source: "Examples\Stokes generation (use capillary)"  
 <img src="Readme_images/Stokes_generation.gif" width=90%>
 
-## History:<br>
+## Notes:
+There is a `readme.pdf` in the `Documentations/` folder. Please find details of how to use this code in it. However, the fastest way to learn how to use this package is to learn from the examples in the `Examples/` folder.
+
+The structure of this code is developed similar to [our solid-core counterpart](https://github.com/AaHaHaa/MMTools). For optimization details of multimode (transverse modes and polarization modes), please see the supplement of our paper on [multimode gain fiber](https://doi.org/10.1364/JOSAB.500586). For details of gas modeling, please read the supplement of [[2]](#references-our-papers).  
+
+I'm Yi-Hao Chen, the author of the code and from Frank Wise's group at Cornell Applied Physics. Feel free to ask questions here or by sending me an email (email address is in my paper).
+
+Please don't forget to cite our paper if you find this code useful in your work. I, the young and early-career researcher, need your support. Similarly, if you need help or have questions about the code, please feel free to send me an email.
+
+### Upgrade this code together:
+If you have any other function that you think important, please point it out in Github's discussions or send me an email. For example, perhaps you would like to add more gas species. I implement with current gases just due to my own research interest.
+
+## History:
 * 5/11/2024:<br>
 I added some examples. APL Photonics data files are updated so that they can be run correctly.  
 A bug regarding SRS under gradient pressure is also fixed.  
