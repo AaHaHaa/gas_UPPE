@@ -262,7 +262,7 @@ if sim.gpu_yes
     dt = gpuArray(dt);
     time_window = gpuArray(time_window);
 end
-omegas = 2*pi*ifftshift(linspace(-floor(Nt/2), floor((Nt-1)/2), Nt))'/time_window; % in 1/ps, in the order that the ifft gives
+omegas = 2*pi*ifftshift(linspace(-floor(Nt/2), floor((Nt-1)/2), Nt))'/time_window; % in rad/ps, in the order that the ifft gives
 real_omegas = (omegas + 2*pi*sim.f0)*1e12; % Hz
 
 % The dispersion term in the UPPE, in frequency space
