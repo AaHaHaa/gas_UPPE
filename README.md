@@ -89,3 +89,5 @@ I extended the photoionization model to gases other than H<sub>2</sub> and He.
 Fixed Ar $n_2$ to the should-be correct value. See the comment in `gas_info()` for details.
 * 10/29/2024:<br>
 Update the code with the newly-developed noise model with [the finally-published paper](https://doi.org/10.48550/arXiv.2410.20567).
+* 2/20/2025:<br>
+Ar refractive index was wrong! I fixed it.
