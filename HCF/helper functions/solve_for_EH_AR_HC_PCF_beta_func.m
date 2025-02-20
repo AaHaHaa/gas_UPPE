@@ -7,7 +7,7 @@ function [beta,SR,mode_profile] = solve_for_EH_AR_HC_PCF_beta_func(wavelength,et
 %                    It contains two fields, range and num
 %        order: make sure that the propagation constant have smooth 
 %               higher-order derivatives up this order
-%        gas_material: 'H2','air','N2','O2','Ar','Xe','Kr','Ne','He'
+%        material: 'H2','air','N2','O2','Ar','Xe','Kr','Ne','He'
 
 % The order of modes, based on propagation constant (beta), is found by
 % running "find_order_of_EH_modes" first.
@@ -24,7 +24,7 @@ sep_pos = strfind(current_path,sep_char);
 current_folder = current_path(1:sep_pos(end));
 upper_folder = current_path(1:sep_pos(end-2));
 addpath(current_folder);
-addpath(fullfile(upper_folder,'gas absorption spectra'));
+addpath(fullfile(upper_folder,'Gas absorption spectra'));
 
 Nf = uint32(length(wavelength));
 
@@ -33,77 +33,24 @@ gas_wavelength = wavelength; % m
 gas_f = c./gas_wavelength*1e-9; % THz
 
 %% Refractive index
+[n_gas,imag_k_gas] = find_n_gas(gas.material,gas_wavelength,eta);
+n_gas = real(n_gas);
 
-% Reference:
-% 1. Walter G., et el, "On the Dependence of the Refractive Index of Gases on Temperature" (1903)
-% 2. Arthur L. Ruoff and Kouros Ghandehari, "THE REFRACTIVE INDEX OF HYDROGEN AS A FUNCTION OF PRESSURE" (1993)
+%% Loss
+% Empirical model by Vincetti:
+% 1. Vincetti et al., "Empirical formulas for calculating loss in hollow
+%    core tube lattice fibers," Opt. Express 24(10), 10313-10325 (2016)
+% 2. Vincetti et al., "A simple analytical model for confinement loss
+%    estimation in hollow-core Tube Lattice Fibers," Opt. Express 27(4),
+%    5230-5237 (2019)
+delta_tube = abs(((gas.core_radius/gas.r_tube + 1)*sin(pi/gas.num_tubes) - 1)*(2*gas.r_tube));
 
-[a,b] = Sellmeier_coefficients(gas.gas_material); % Sellmeier coefficients
-Sellmeier_terms = @(lambda,a,b) a.*lambda.^2./(lambda.^2 - b.^2);
-switch gas.gas_material
-    case 'H2'
-        %n_gas = calc_n_H2(gas_wavelength*1e9,sim.cuda_dir_path,gas.wavelength_order);
-        n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        permittivity_r = n_from_Sellmeier(0.120).^2;
-        n_gas_120 = sqrt((permittivity_r - 1)*eta + 1); %  % Sellmeier is valid only above 164nm
-        n_gas(gas_wavelength<120e-9) = n_gas_120;
-        
-        % pressure-induced absorption
-        imag_k_gas = read_absorption(gas.gas_material,gas_wavelength,eta);
-    case 'O2'
-        n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        permittivity_r = n_from_Sellmeier(0.4).^2;
-        n_gas_400 = sqrt((permittivity_r - 1)*eta + 1); %  % Sellmeier is valid only above 164nm
-        n_gas(gas_wavelength<120e-9) = n_gas_400;
-        
-        % pressure-induced absorption
-        imag_k_gas = read_absorption(gas.gas_material,gas_wavelength,eta);
-    case {'air','N2'}
-        n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        % pressure-induced absorption
-        imag_k_gas = read_absorption(gas.gas_material,gas_wavelength,eta);
-    case {'Ar','Ne','He'}
-        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        imag_k_gas = 0;
-    case {'Xe','Kr'}
-        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        permittivity_r = n_from_Sellmeier(0.113).^2;
-        n_gas_113 = sqrt((permittivity_r - 1)*eta + 1); % Sellmeier is valid only above ~113nm
-        n_gas(gas_wavelength<113e-9) = n_gas_113;
-        
-        imag_k_gas = 0;
-    case 'CH4'
-        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        % Avoid the singularity at resonances
-        idx_resonance = n_gas < 1;
-        n_gas(idx_resonance) = 1;
-        
-        imag_k_gas = 0;
-end
+alpha_empirical = loss_AR_HC_PCF(wavelength,...
+                                 gas.num_tubes,gas.r_tube,gas.t_tube,delta_tube);
+
+%target_wavelength = wavelength(floor(length(wavelength)/2)+1); % m
+target_wavelength = gas.mode_profile_wavelength; % m
+target_idx = find(wavelength<=target_wavelength,1);
 
 %%
 
@@ -112,7 +59,7 @@ user_midx = [1,4,9,17,28,40]; % a maximum of 6 circularly symmetric modes includ
 user_midx = user_midx(sim.midx);
 num_modes = length(user_midx);
 
-n_out = calc_n_silica(gas_wavelength*1e9,sim.gpu_yes,sim.cuda_dir_path,gas.wavelength_order);
+n_silica = calc_n_silica(gas_wavelength*1e9,sim.gpu_yes,sim.cuda_dir_path,gas.wavelength_order);
 
 %%
 load(fullfile(current_folder,'nm_order.mat'),'sorted_nm');
@@ -144,20 +91,20 @@ if sim.gpu_yes
 end
 
 kappa = unm/gas.core_radius;
-sigma = sqrt(k0.^2.*(n_out.^2-n_gas.^2) + kappa.^2);
+sigma = sqrt(k0.^2.*(n_silica.^2-n_gas.^2) + kappa.^2);
 
-Zd = 1./sqrt(n_out.^2-1);
+Zd = 1./sqrt(n_silica.^2-1);
 %Yd = n_out.^2./sqrt(n_out.^2-1);
-nd_real = real(n_out);
-nd_imag = imag(n_out);
-sk_TE = sigma./kappa.*(1+kappa./sigma.*tanh(nd_real.*nd_imag.*Zd.^2.*sigma*gas.delta))./(1+sigma./kappa.*tanh(nd_real.*nd_imag.*Zd.^2.*sigma*gas.delta));
-sk_TM = sigma./nd_real.^2./kappa.*(1+nd_real.^2.*kappa./sigma.*tanh(nd_real.*nd_imag.*Zd.^2.*sigma*gas.delta))./(1+sigma./nd_real.^2./kappa.*tanh(nd_real.*nd_imag.*Zd.^2.*sigma*gas.delta));
+nd_real = real(n_silica);
+nd_imag = imag(n_silica);
+sk_TE = sigma./kappa.*(1+kappa./sigma.*tanh(nd_real.*nd_imag.*Zd.^2.*sigma*gas.t_tube))./(1+sigma./kappa.*tanh(nd_real.*nd_imag.*Zd.^2.*sigma*gas.t_tube));
+sk_TM = sigma./nd_real.^2./kappa.*(1+nd_real.^2.*kappa./sigma.*tanh(nd_real.*nd_imag.*Zd.^2.*sigma*gas.t_tube))./(1+sigma./nd_real.^2./kappa.*tanh(nd_real.*nd_imag.*Zd.^2.*sigma*gas.t_tube));
 
 Z0 = k0./kappa;
 Y0 = n_gas.^2.*k0./kappa;
 
-Z_TE = Z0.*(1/2-1i*(sk_TE+1./sk_TE).^(-1).*tan(sigma*gas.delta))./(2-1i*(sk_TE+1./sk_TE).*tan(sigma*gas.delta));
-Y_TM = Y0.*(1/2-1i*(sk_TM+1./sk_TM).^(-1).*tan(sigma*gas.delta))./(2-1i*(sk_TM+1./sk_TM).*tan(sigma*gas.delta));
+Z_TE = Z0.*(1/2-1i*(sk_TE+1./sk_TE).^(-1).*tan(sigma*gas.t_tube))./(2-1i*(sk_TE+1./sk_TE).*tan(sigma*gas.t_tube));
+Y_TM = Y0.*(1/2-1i*(sk_TM+1./sk_TM).^(-1).*tan(sigma*gas.t_tube))./(2-1i*(sk_TM+1./sk_TM).*tan(sigma*gas.t_tube));
 ZdYd = 1/2*(Z_TE + Y_TM);
 
 ki = (1i*ZdYd.*nm(1,:)./k0/gas.core_radius-1).*unm./(1i*ZdYd./k0/gas.core_radius.*(nm(1,:)-1)-1)/gas.core_radius;
@@ -165,16 +112,26 @@ gamma = sqrt((k0.*n_gas).^2 - ki.^2);
 
 s = 0.02;
 a_AP = 1.075*gas.core_radius; % area-preserving core radius
-a_c = a_AP;%./(1+s*gas_wavelength.^2/a_AP/gas.delta);
+a_c = a_AP;%./(1+s*gas_wavelength.^2/a_AP/gas.t_tube);
 
 if any(nd_real < 1)
     %error('AR_HC_PCF:error','The cladding has refractive index smaller than one in the frequency window.\nPlease avoid it. The light isn''t guided here.');
 end
 
+% Vincetti's empirical model considers only the fundamental mode, so I
+% resort to poor-man's model to find the loss for higher-order modes.
 sd = 2e-7; % scaling coefficient
 Fd = sd*gas_wavelength.^3./a_c.^4; % the power fraction of light residing in the dielectric
-alpha = gas.f_FEM*imag(gamma) + Fd.*(imag(n_out).*k0) + (1-Fd).*imag_k_gas; % total loss
-gamma = real(gamma) + 1i*alpha;
+f_FEM = (alpha_empirical(target_idx,1) - Fd(target_idx,1).*(imag(n_silica(target_idx,1)).*k0(target_idx,1)))/imag(gamma(target_idx,1)); % overall fitting factor that allows us to adjust the capillary spectral loss shape to match the levels found in COMSOL (from Bache's poor-man's model)
+alpha_empirical = alpha_empirical + Fd.*(imag(n_silica).*k0); % include loss from the silica material
+alpha_poorman = f_FEM*imag(gamma) + Fd.*(imag(n_silica).*k0); % loss from poor-man's model
+alpha = zeros(Nf,num_modes*2);
+if user_midx(1) == 1
+    alpha(:,1:2) = repmat(alpha_empirical,1,2); alpha(:,3:end) = alpha_poorman(:,3:end);
+else
+    alpha = alpha_poorman;
+end
+gamma = real(gamma) + 1i*(alpha + (1-Fd).*imag_k_gas);
 
 %% Propagation constant
 chosen_midx = [];
@@ -210,9 +167,6 @@ dtheta = 2*pi/gas.xy_sampling;
 num_polarized = 2; % two polarizations (r,theta)
 mode_profiles = complex(zeros(1,num_modes*2,gas.xy_sampling,gas.xy_sampling,num_polarized));
 
-%target_wavelength = wavelength(floor(length(wavelength)/2)+1); % m
-target_wavelength = gas.mode_profile_wavelength; % m
-
 abs_n_gas = interp1(gas_f,abs(n_gas),c*1e-9/target_wavelength);
 ang_n_gas = interp1(gas_f,unwrap(angle(n_gas),[],1),c*1e-9/target_wavelength);
 target_n_gas = abs_n_gas.*exp(1i*ang_n_gas);
@@ -221,7 +175,7 @@ abs_ki = interp1(gas_f,abs(ki),c*1e-9/target_wavelength);
 ang_ki = interp1(gas_f,unwrap(angle(ki),[],1),c*1e-9/target_wavelength);
 target_ki = abs_ki.*exp(1i*ang_ki);
 
-target_n_out = interp1(gas_f,n_out,c*1e-9/target_wavelength); % for real n_out
+target_n_out = interp1(gas_f,n_silica,c*1e-9/target_wavelength); % for real n_out
 target_k0 = interp1(gas_f,k0,c*1e-9/target_wavelength);
 
 % "GPU besselj" doesn't allow complex double" input, so I need to gather 

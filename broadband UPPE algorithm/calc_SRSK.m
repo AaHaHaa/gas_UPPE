@@ -373,7 +373,7 @@ function [nonzero_midx1234s,S,...
                                                               num_modes,...
                                                               use_gpu)
 %REFINE_SCALAR_S It refine the nonzero indices by removing (midx1,midx2,midx4,midx3)
-%when midx3~=midx4 in scalar simulations. The cuda file in GMMNLSE is 
+%when midx3~=midx4 in scalar simulations. The cuda file in UPPE is 
 %updated accordingly.
 
 [beginning_nonzero,ending_nonzero] = beginning_idx(nonzero_midx1234s,num_modes);
@@ -407,7 +407,7 @@ function [nonzero_midx1234s,S,...
                                                                  num_modes,...
                                                                  use_gpu)
 %REFINE_POLARIZED_S It refine the nonzero indices by removing (midx1,midx2,midx4,midx3)
-%when midx3~=midx4 in polarized simulations. The cuda file in GMMNLSE is 
+%when midx3~=midx4 in polarized simulations. The cuda file in UPPE is 
 %updated accordingly.
 
 [beginning_nonzero,ending_nonzero] = beginning_idx(nonzero_midx1234s,num_modes);

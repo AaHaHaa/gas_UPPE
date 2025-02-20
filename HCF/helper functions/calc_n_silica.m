@@ -7,7 +7,7 @@ function target_n = calc_n_silica(wavelength,use_gpu,varargin)
 numvarargs = length(varargin);
 if numvarargs > 4
     error('calc_n_silica:TooManyInputs', ...
-        'It takes only at most 4 optional inputs');
+          'It takes only at most 4 optional inputs');
 end
 
 % Set defaults for optional inputs

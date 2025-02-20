@@ -1,10 +1,10 @@
-function absorption = read_absorption(gas_material,lambda,gas_density)
+function absorption = read_absorption(material,lambda,gas_density)
 %READ_ABSORPTION It reads the pressure-induced Raman-IR absorption.
 % Although Raman should be IR inactive, molecular collision can distort
 % electron distribution resulting in IR-active Raman absorption.
 %
 % Input:
-%   gas_material: 'H2','N2','O2','air'
+%   material: 'H2','N2','O2','air'
 %   lambda: wavelength (m)
 %   gas_density: gas density in amagat
 
@@ -23,7 +23,7 @@ else
 end
 
 %% Reading data from the specified file
-switch gas_material
+switch material
     case 'H2'
         dataArray_rot = load('H2_rot_Raman_absorption_from_collision.mat');
         dataArray_vib = load('H2_vib_Raman_absorption_from_collision.mat');

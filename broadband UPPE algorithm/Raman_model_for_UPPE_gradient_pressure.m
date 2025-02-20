@@ -17,7 +17,7 @@ function gas_eqn = precalc_gas_params(sim,gas,Nt,...
 %       sim.include_Raman
 %       sim.gpu_yes
 %   gas: a structure containing
-%       gas.gas_material
+%       gas.material
 %       gas.model
 %       gas.(H2, N2, O2, CH4, or air)
 %   time_window: the size of the time window (ps)
@@ -74,7 +74,7 @@ if sim.include_Raman
     end
     gas_eqn.m2 = m2; % record the index for rearrangement which will be useful later
     
-    switch gas.gas_material
+    switch gas.material
         case {'H2','N2','O2'}
             gas_eqn.num_Raman = 2;
         case 'air'
@@ -96,7 +96,7 @@ function [gas_i,...
                                              gas_pressure_steps,...
                                              gas_pressure,eta,...
                                              time_window,...
-                                             omegas,wavelength)
+                                             Omega,wavelength)
 %UPDATE_R_D It updates Raman and dispersion at a specified gas pressure
 %(eta)
 
@@ -118,7 +118,7 @@ if sim.include_Raman
     gas = Raman_T2( gas,eta );
     switch gas.model
         case 0
-            switch gas.gas_material
+            switch gas.material
                 case 'H2'
                     R = [sum(gas.H2.R.preR.*exp(-T/gas.H2.R.T2).*exp(1i*gas.H2.R.omega.*T),2),...
                          sum(gas.H2.V.preR.*exp(-T/gas.H2.V.T2).*exp(1i*gas.H2.V.omega.*T),2)]*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
@@ -142,7 +142,7 @@ if sim.include_Raman
             gas_eqn.R_delta_permittivity = ifft(R,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % Raman-induced permittivity change
             Rw = ifft(imag(R),gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % Raman response; only "sin()" part matters in Raman computations
         case 1
-            switch gas.gas_material
+            switch gas.material
                 case 'H2'
                     R = ifft([sum(gas.H2.R.preR.*exp(-T/gas.H2.R.T2).*exp(1i*gas.H2.R.omega.*T),2),...
                               sum(gas.H2.V.preR.*exp(-T/gas.H2.V.T2).*exp(1i*gas.H2.V.omega.*T),2)],[],1)*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
@@ -166,7 +166,7 @@ if sim.include_Raman
     end
     
     % Raman response (under frequency domain for the convolution operation later)
-    switch gas.gas_material
+    switch gas.material
         case {'H2','N2','O2','air'}
             Rw_vib = sum(Rw(:,2:2:end),2);
             Rw_rot = sum(Rw(:,1:2:end),2);
@@ -219,7 +219,7 @@ end
 % ---------------------------------------------------------------------
 % Calculate the propagation constant based on the current gas pressure
 fiber.betas = recompute_beta_gradient_pressure(wavelength,eta,gas);
-D_op = 1i*(ifftshift(fiber.betas,1)-(sim.betas(1)+sim.betas(2)*omegas));
+D_op = 1i*(ifftshift(fiber.betas,1)-(sim.betas(1)+sim.betas(2)*Omega));
 % Zero-padding for upsampling computation in RK4IP
 D_op_upsampling = cat(1,D_op(1:gas_eqn.n,:),gas_eqn.upsampling_zeros,D_op(gas_eqn.n+1:end,:));
 

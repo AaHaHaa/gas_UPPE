@@ -13,7 +13,7 @@ end
 current_path = mfilename('fullpath');
 sep_pos = strfind(current_path,sep_char);
 upper_folder = current_path(1:sep_pos(end-1));
-addpath([upper_folder 'HCF/helper functions'],[upper_folder 'gas absorption spectra']);
+addpath([upper_folder 'HCF/helper functions'],[upper_folder 'Gas absorption spectra']);
 
 permittivity0 = 8.8541878176e-12; % F/m
 c = 299792458; % m/s
@@ -29,7 +29,7 @@ temperature0 = 273.15; % 0 degree Celsius
 % eta is included during the propagation.
 gas.Ng = pressure0/k/temperature0; % m^(-3)
 
-if ismember(gas.gas_material,{'H2','N2','O2','air'})
+if ismember(gas.material,{'H2','N2','O2','air'})
     % eta is calculated with the unit, amagat
     % Ideal gas law is used here.
     % Because lower pressure creates a longer dephasing time, I take the
@@ -53,9 +53,9 @@ end
 % 1. Walter G., et el, "On the Dependence of the Refractive Index of Gases on Temperature" (1903)
 % 2. Arthur L. Ruoff and Kouros Ghandehari, "THE REFRACTIVE INDEX OF HYDROGEN AS A FUNCTION OF PRESSURE" (1993)
 
-[a,b] = Sellmeier_coefficients(gas.gas_material); % Sellmeier coefficients
+[a,b] = Sellmeier_coefficients(gas.material); % Sellmeier coefficients
 Sellmeier_terms = @(lambda,a,b) a.*lambda.^2./(lambda.^2 - b.^2);
-switch gas.gas_material
+switch gas.material
     case 'H2'
         n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
         
@@ -63,7 +63,7 @@ switch gas.gas_material
         gas.permittivity_r_120 = n_from_Sellmeier(0.120).^2;
         
         % pressure-induced absorption
-        Raman_absorption = read_absorption(gas.gas_material,wavelength,1);
+        Raman_absorption = read_absorption(gas.material,wavelength,1);
         gas.Raman_absorption = Raman_absorption./(2*pi./wavelength);
     case 'O2'
         n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
@@ -72,7 +72,7 @@ switch gas.gas_material
         gas.permittivity_r_400 = n_from_Sellmeier(0.4).^2;
         
         % pressure-induced absorption
-        Raman_absorption = read_absorption(gas.gas_material,wavelength,1);
+        Raman_absorption = read_absorption(gas.material,wavelength,1);
         gas.Raman_absorption = Raman_absorption./(2*pi./wavelength);
     case {'air','N2'}
         n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
@@ -80,7 +80,7 @@ switch gas.gas_material
         gas.permittivity_r = n_from_Sellmeier(wavelength*1e6).^2;
         
         % pressure-induced absorption
-        Raman_absorption = read_absorption(gas.gas_material,wavelength,1);
+        Raman_absorption = read_absorption(gas.material,wavelength,1);
         gas.Raman_absorption = Raman_absorption./(2*pi./wavelength);
     case {'He','Ne','Ar'}
         n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
@@ -149,7 +149,7 @@ gas.coeff_beta_with_eta = gas.k0.^2./gas.beta_no_gas;
 %    "Generation of 0.1-TW 5-fs optical pulses at a 1-kHz repetition rate," Opt. Lett. 22(20), 1562-1564 (1997)
 % 2. Suda et al.,
 %    "Generation of sub-10-fs, 5-mJ-optical pulses using a hollow fiber with a pressure gradient," Appl. Phys. Lett. 86, 111116 (2005)
-switch gas.gas_material
+switch gas.material
     case 'H2' % m^2/(W*atm)
               % This value is taken from Wahlstrand, et al., 
               % "Absolute measurement of the ultrafast nonlinear electronic and rovibrational response in H2 and D2" (2015)
@@ -190,27 +190,27 @@ switch gas.gas_material
               % "Pulse propagation in hollow-core fiber at high-pressure regime: application to compression of tens of ?J pulses and determination of nonlinear refractive index of xenon at 1.03um" Applied Optics (2018)
         n2 = 50.1e-24;
     case 'Ar' % m^2/(W*atm)
-              % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
+              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
         n2 = 7.96e-24;
     case 'Ne' % m^2/(W*atm)
-              % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
+              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
         n2 = 0.85e-24;
     case 'He' % m^2/(W*atm)
-              % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
+              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
         n2 = 0.34e-24;
     case 'Kr' % m^2/(W*atm)
-              % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
+              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
         n2 = 18.9e-24;
 end
-sim.X3_prefactor = n2/3*4*permittivity0.*n_eff.^2*c; % m^2/V^2
+fiber.X3_prefactor = n2/3*4*permittivity0.*n_eff.^2*c; % m^2/V^2
 
 %% Ionization potential
 if sim.photoionization_model ~= 0
-    switch gas.gas_material % from "NIST Chemistry WebBook"
+    switch gas.material % from "NIST Chemistry WebBook"
         case 'H2'
             ionization_energy = 15.42593; % eV
             

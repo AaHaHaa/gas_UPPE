@@ -31,7 +31,7 @@ gas.temperature = 273.15 + 25; % K
 gas.pressure = 3*1e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 1030e-9; % m
-gas.gas_material = 'N2';
+gas.material = 'N2';
 gas.fiber_type = 'MWLW_coating';
 gas.xy_sampling = 101;
 

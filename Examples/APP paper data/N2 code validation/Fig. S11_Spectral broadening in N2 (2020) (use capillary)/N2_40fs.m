@@ -31,7 +31,7 @@ gas.temperature = 288.15; % K
 gas.pressure = 1*1.01325e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 780e-9; % m
-gas.gas_material = 'N2';
+gas.material = 'N2';
 gas.fiber_type = 'no_coating';
 gas.xy_sampling = 101;
 

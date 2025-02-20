@@ -214,7 +214,7 @@ for n_it = 1:sim.MPA.n_tot_max
     end
 
     % Apply the convolution for each part of the Raman sum:
-    % The convolution using Fourier Transform is faster if both arrays are
+    % The convolution using Fourier transform is faster if both arrays are
     % large. If one of the array is small, "conv" can be faster.
     % Please refer to
     % "https://blogs.mathworks.com/steve/2009/11/03/the-conv-function-and-implementation-tradeoffs/"
@@ -308,7 +308,7 @@ for n_it = 1:sim.MPA.n_tot_max
     end
 
     if n_it == sim.MPA.n_tot_max
-        error('Error in GMMNLSE_MPA_step: The step did not converge after %d iterations, aborting.', sim.MPA.n_tot_max);
+        error('Error in stepping_MPA_constant_pressure: The step did not converge after %d iterations, aborting.', sim.MPA.n_tot_max);
     end
 end
 

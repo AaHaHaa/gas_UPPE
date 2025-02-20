@@ -26,7 +26,7 @@ gas.temperature = 273.15 + 25; % K
 gas.pressure = 20*1.01325e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 1030e-9; % m
-gas.gas_material = 'H2';
+gas.material = 'H2';
 gas.fiber_type = 'MWLW_coating';
 gas.xy_sampling = 101;
 
@@ -62,7 +62,7 @@ AS_R_idx = arrayfun(@(x)find(f>x,1),f_AS_R); f_AS_R = f(AS_R_idx); beta_AS_R = n
 
 omega_P = f_pump*2*pi*1e12;
 
-X3 = sim.X3(find(lambda<gas.mode_profile_wavelength*1e9,1));
+X3 = fiber.X3(find(lambda<gas.mode_profile_wavelength*1e9,1));
 
 tfwhm_all = [linspace(0.1,1,10),linspace(1.1,10,40)];
 energy_all = linspace(0.01,2,100);

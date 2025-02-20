@@ -34,7 +34,7 @@ gas.temperature = 288; % K
 gas.pressure = 10*1.013e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 1030e-9; % m
-gas.gas_material = 'H2';
+gas.material = 'H2';
 gas.fiber_type = 'no_coating';
 gas.xy_sampling = 101;
 

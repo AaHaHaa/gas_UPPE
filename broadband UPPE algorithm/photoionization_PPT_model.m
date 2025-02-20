@@ -8,10 +8,10 @@ function [ne,DneDt] = photoionization_PPT_model(A_t, inverse_Aeff, ionization_en
 %   
 % Input:
 %
-%   A_w: (Nt,1); the electric field under the frequency domain (in ifft order)
-%   omega_pulse: (Nt,1); the instantaneous angular frequency of the field (2*pi*Hz=rad)
+%   A_t: (Nt,1); the electric field under the time domain
 %   inverse_Aeff: scalar; 1/Aeff=SR value (Aeff: mode-field area) (1/m^2)
 %   ionization_energy: scalar (J)
+%   f0: center frequency of the frequency window (THz)
 %   dt: scalar (ps)
 %   Ng: the gas number density (1/m^3)
 %   l: quantum number l
@@ -34,7 +34,7 @@ end
 % Find instantaneous frequency of the pulse
 pulse_phase = unwrap(angle(A_t));
 pulse_phase = conv(pulse_phase,ones(floor(Nt/100),1)/floor(Nt/100),'same'); % smoothing is required; otherwise, it's too noisy such that an erroneous high-frequency number is calculated
-omega_pulse = -(pulse_phase(3:end)-pulse_phase(1:end-2))/(2*dt)+2*pi*f0; % THz; I use "central difference" to calculate the slope here
+omega_pulse = -(pulse_phase(3:end)-pulse_phase(1:end-2))/(2*dt) + 2*pi*f0; % THz; I use "central difference" to calculate the slope here
 omega_pulse = [omega_pulse(1);omega_pulse;omega_pulse(end)]*1e12; % Hz
 
 me = 9.1093837e-31; % kg

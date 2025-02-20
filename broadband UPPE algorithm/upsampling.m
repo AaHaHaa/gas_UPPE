@@ -1,5 +1,8 @@
 function [D_op_upsampling,prefactor,...
-          upsampling_zeros] = upsampling(sim,Nt,gas_Nt,num_modes,D_op,prefactor)
+          upsampling_zeros] = upsampling(sim,...
+                                         Nt,gas_Nt,...
+                                         num_modes,...
+                                         D_op,prefactor)
 %UPSAMPLING Upsampling to avoid frequency aliasing
 %
 % Aliasing mostly comes from Raman shift. However, when the spectrum
@@ -17,7 +20,7 @@ end
 n = ceil(Nt/2);
 % Zero-paddding in frequency domain for upsampling temporally
 % Zeros are added at the low- and high-frequency side which is the center
-% of the array after discrete Fourier Transform.
+% of the array after discrete Fourier transform.
 if ~isempty(D_op) % not computing with gradient pressure
     D_op_upsampling = cat(1,D_op(1:n,:),upsampling_zeros,D_op(n+1:end,:));
 else

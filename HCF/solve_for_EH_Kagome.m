@@ -9,11 +9,11 @@
 
 clearvars; close all;
 
-addpath('helper functions','../gas absorption spectra/');
+addpath('helper functions','../Gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-gas_material = 'Xe';
+material = 'Xe';
 
 pressure = 2.7; % atm
 temperature = 288.15; % 15 degree Celsius
@@ -39,87 +39,20 @@ user_midx = 1;%[1,4,9,17,28,40];
 num_modes = length(user_midx);
 
 % refractive index
-% Reference:
-% 1. Walter G., et el, "On the Dependence of the Refractive Index of Gases on Temperature" (1903)
-% 2. Arthur L. Ruoff and Kouros Ghandehari, "THE REFRACTIVE INDEX OF HYDROGEN AS A FUNCTION OF PRESSURE" (1993)
 pressure = pressure*1.01325e5; % Pa
 pressure0 = 1.01325e5; % Pa
 temperature0 = 273.15; % 0 degree Celsius
-[a,b] = Sellmeier_coefficients(gas_material); % Sellmeier coefficients
-Sellmeier_terms = @(lambda,a,b) a.*lambda.^2./(lambda.^2 - b.^2);
+eta = (pressure/temperature)/(pressure0/temperature0); % gas density (in amagat)
+n_gas = find_n_gas(material,wavelength*1e-9,eta);
+
 cuda_dir_path = '../cuda';
 diff_order = 6;
-switch gas_material
-    case 'H2'
-        %n_gas = calc_n_H2(wavelength,cuda_dir_path,diff_order);
-        n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
-        
-        permittivity_r = n_from_Sellmeier(wavelength*1e-3).^2;
-        n_gas = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % refractive index of the gas
-        
-        permittivity_r = n_from_Sellmeier(0.12).^2;
-        n_gas_120 = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % Sellmeier is valid only above 164nm
-        n_gas(wavelength<120) = n_gas_120;
-        
-        % pressure-induced absorption
-        imag_k_gas = read_absorption(gas_material,wavelength*1e-9,(pressure/temperature)/(pressure0/temperature0));
-    case 'O2'
-        n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
-        
-        permittivity_r = n_from_Sellmeier(wavelength*1e-3).^2;
-        n_gas = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % refractive index of the gas
-        
-        permittivity_r = n_from_Sellmeier(0.4).^2;
-        n_gas_400 = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % Sellmeier is valid only above 400nm
-        n_gas(wavelength<400) = n_gas_400;
-        
-        % pressure-induced absorption
-        imag_k_gas = read_absorption(gas_material,wavelength*1e-9,(pressure/temperature)/(pressure0/temperature0));
-    case {'air','N2'}
-        n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
-        
-        permittivity_r = n_from_Sellmeier(wavelength*1e-3).^2;
-        n_gas = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % refractive index of the gas
-        
-        % pressure-induced absorption
-        imag_k_gas = read_absorption(gas_material,wavelength*1e-9,(pressure/temperature)/(pressure0/temperature0));
-    case {'Ar','Ne','He'}
-        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
-        
-        permittivity_r = n_from_Sellmeier(wavelength*1e-3).^2;
-        n_gas = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % refractive index of the gas
-        
-        imag_k_gas = 0;
-    case {'Xe','Kr'}
-        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
-        
-        permittivity_r = n_from_Sellmeier(wavelength*1e-3).^2;
-        n_gas = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % refractive index of the gas
-        
-        permittivity_r = n_from_Sellmeier(0.113).^2;
-        n_gas_113 = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % Sellmeier is valid only above ~113nm
-        n_gas(wavelength<113) = n_gas_113;
-        
-        imag_k_gas = 0;
-    case 'CH4'
-        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
-        
-        permittivity_r = n_from_Sellmeier(wavelength*1e-3).^2;
-        n_gas = sqrt((permittivity_r - 1)*(pressure/temperature)/(pressure0/temperature0) + 1); % refractive index of the gas
-        
-        % Avoid the singularity at resonances
-        idx_resonance = n_gas < 1;
-        n_gas(idx_resonance) = 1;
-        
-        imag_k_gas = 0;
-end
-
-n_out = calc_n_silica(wavelength,use_gpu,cuda_dir_path,diff_order);
+n_silica = calc_n_silica(wavelength,use_gpu,cuda_dir_path,diff_order);
 
 if abs(round(pressure/1.01325e5)-pressure/1.01325e5) < eps(1) % pressure is an integer number of atm
-    saved_filename = sprintf('info_Kagome_%s_%dum_%datm_%dnm.mat',gas_material,core_radius*2*1e6,pressure/1.01325e5,delta*1e9);
+    saved_filename = sprintf('info_Kagome_%s_%dum_%datm_%dnm.mat',material,core_radius*2*1e6,pressure/1.01325e5,delta*1e9);
 else
-    saved_filename = sprintf('info_Kagome_%s_%dum_%.1fatm_%dnm.mat',gas_material,core_radius*2*1e6,pressure/1.01325e5,delta*1e9);
+    saved_filename = sprintf('info_Kagome_%s_%dum_%.1fatm_%dnm.mat',material,core_radius*2*1e6,pressure/1.01325e5,delta*1e9);
 end
 
 %%
@@ -153,7 +86,7 @@ for midx = 1:num_modes*2
         mode{midx} = 'EH';
     end
     
-    ZdYd(:,midx) = calc_ZdYd(n_gas,n_out,mode{midx});
+    ZdYd(:,midx) = calc_ZdYd(n_gas,n_silica,mode{midx});
     
     % unm: zeros of the Bessel function of the first kind
     u = besselzero(nm(1,midx)-1,nm(2,midx),1);
@@ -178,7 +111,7 @@ gamma = sqrt((k0.*n_gas).^2 - ki.^2);
 
 % Check validity of the Marcatili's equation
 figure;
-h = plot(wavelength*1e6,abs(n_out./n_gas).*unm(1:num_modes)./(k0.*a_c));
+h = plot(wavelength*1e6,abs(n_silica./n_gas).*unm(1:num_modes)./(k0.*a_c));
 set(h,'linewidth',2); set(gca,'fontsize',18);
 xlabel('Wavelength (\mum)');
 ylabel('|n_{out}^{relative}|u_{nm}/(k_0a)');
@@ -210,7 +143,7 @@ else
     target_k0 = interp1(wavelength,k0,target_wavelength);
 end
 target_n_in = interp1(wavelength,n_gas,target_wavelength);
-target_n_out = interp1(wavelength,n_out,target_wavelength);
+target_n_out = interp1(wavelength,n_silica,target_wavelength);
 
 num_polarized = 2; % two polarizations (r,theta)
 mode_profiles = complex(zeros(target_wavelength_sampling,num_modes*2,r_sampling,theta_sampling,num_polarized));

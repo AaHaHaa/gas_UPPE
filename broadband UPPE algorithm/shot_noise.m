@@ -5,10 +5,10 @@ h = 6.62607015e-34; % J*s
 k = 1.38064852e-23; % Boltzmann constant (MKS unit)
 
 time_window = gas_Nt*gas_dt; % ps
-f = ifftshift((-gas_Nt/2:gas_Nt/2-1)'/time_window,1); % THz
+f = ifftshift((-floor(gas_Nt/2):floor((gas_Nt-1)/2))'/time_window,1); % THz
 real_f = (f+sim.f0)*1e12; % Hz
 
-% I use analytical-signal representation for solving GMMNLSE, so the field
+% I use analytical-signal representation for solving UPPE, so the field
 % covers only the positive frequencies.
 real_f(real_f<0) = 0; % no noise at negative frequencies
 

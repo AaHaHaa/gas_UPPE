@@ -32,9 +32,10 @@ gas.temperature = 288; % K
 gas.pressure = 1e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 1030e-9; % m
-gas.gas_material = 'N2';
-gas.delta = 300e-9; % m; wall thickness of anti-resonant fibers
-gas.f_FEM = 1e-2; % loss factor
+gas.material = 'N2';
+gas.num_tubes = 7; % the number of tubes in the anti-resonant fiber
+gas.r_tube = 12.5e-6; % m; the tube radius (not core!)
+gas.t_tube = 300e-9; % m; the tube's wall thickness of anti-resonant fibers
 gas.fiber_type = 'AR_HC_PCF';
 gas.xy_sampling = 101;
 

@@ -1,4 +1,4 @@
-function [Keldysh_parameter,W,relative_ne,g] = calc_photoionization_parameter(prop_output,fiber,sim,gas_material)
+function [Keldysh_parameter,W,relative_ne,g] = calc_photoionization_parameter(prop_output,fiber,sim,material)
 %CALC_PHOTOIONIZATION_PARAMETER This code computes some parameters used
 %in the Perelomov-Popov-Terent'ev (PPT) photoionization model or generated
 %from it.
@@ -9,7 +9,7 @@ function [Keldysh_parameter,W,relative_ne,g] = calc_photoionization_parameter(pr
 %   prop_output.dt: scalar (ps)
 %   fiber.SR:  scalar; 1/Aeff=SR value (Aeff: mode-field area) (1/m^2)
 %   sim.f0: scalar; center frequency (THz)
-%   gas_material: a string; the gas material such as 'H2', 'N2', etc.
+%   material: a string; the gas material such as 'H2', 'N2', etc.
 %
 % Output:
 %   Keldysh_parameter: (Nt,?,?)
@@ -21,7 +21,7 @@ function [Keldysh_parameter,W,relative_ne,g] = calc_photoionization_parameter(pr
 %                C: some constant, |A|: electric field (from prop_output.fields)
 
 %% Ionization potential
-switch gas_material
+switch material
     case 'H2'
             ionization_energy = 15.42593; % eV
             

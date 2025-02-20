@@ -60,14 +60,14 @@ gas.temperature = 300; % K
 gas.pressure = 4*1e5; % Pa; gas pressure
 gas.wavelength_order = 6; % The code recomputes the propagation constant to ensure that it has smooth higher-order derivatives up this order; set this to 6, currently maximum implemented value in mySpline.cu, all the time
 gas.mode_profile_wavelength = 1030e-9; % m; the wavelength of the mode profile used to compute SR values and overlap integrals, etc.
-gas.gas_material = 'N2';
+gas.material = 'N2';
 gas.fiber_type = 'no_coating'; % 'Ag_coating', 'no_coating', 'MWLW_coating' coating types for capillaries
 gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles for SR values and overlap integrals, etc.
 
 % Load hollow-core fiber parameters based on the configured parameters
 %
 % gas.Ng - 1/m^3; gas number density
-% gas.(gas.gas_material).(Raman_type).(Raman_parameters)
+% gas.(gas.material).(Raman_type).(Raman_parameters)
 % 
 % e.g.
 %    gas.N2.R.T2 - N2's coherence decay time between the ground state and the excited rotational level
@@ -106,5 +106,5 @@ fiber_calc_pulse_speed.SR = fiber.SR*1e-30;
 output_calc_pulse_speed = UPPE_propagate(fiber_calc_pulse_speed,initial_condition,sim,gas);
 
 %% Save the results
-save(sprintf('redshift_%s_%.1fm_%uum_%2.1fbar.mat',gas.gas_material,fiber.L0,gas.core_radius*2*1e6,gas.pressure/1e5),'-v7.3',...
+save(sprintf('redshift_%s_%.1fm_%uum_%2.1fbar.mat',gas.material,fiber.L0,gas.core_radius*2*1e6,gas.pressure/1e5),'-v7.3',...
      'c','dt','f','f_range','fiber','gas','lambda','Nt','num_save','prop_output','sim','t','time_window','wavelength_range','output_calc_pulse_speed');

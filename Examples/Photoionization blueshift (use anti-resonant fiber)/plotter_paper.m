@@ -44,7 +44,7 @@ xlim([400,900]);
 print(gcf,'all_spectra.pdf','-dpdf');
 
 %%
-[Keldysh_parameter,~,relative_ne] = calc_photoionization_parameter(prop_output,fiber,sim,gas.gas_material);
+[Keldysh_parameter,~,relative_ne] = calc_photoionization_parameter(prop_output,fiber,sim,gas.material);
 fprintf('min Keldysh parameter: %6.4f\n',min(Keldysh_parameter(:)));
 
 [max_peak_power,max_idx] = max(abs(prop_output.fields));

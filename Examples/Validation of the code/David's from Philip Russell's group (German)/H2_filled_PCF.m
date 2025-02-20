@@ -52,14 +52,14 @@ gas.temperature = 288; % K
 gas.pressure = 10*1.013e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 1030e-9; % m
-gas.gas_material = 'H2';
+gas.material = 'H2';
 gas.fiber_type = 'no_coating';
 gas.xy_sampling = 101;
 
 % Load hollow-core fiber parameters based on the configured parameters
 %
 % gas.Ng - 1/m^3; gas number density
-% gas.(gas.gas_material).(Raman_type).(Raman_parameters)
+% gas.(gas.material).(Raman_type).(Raman_parameters)
 % 
 % e.g.
 %    gas.H2.R.T1 - H2's upper population lifetime for the excited rotational level (unused)

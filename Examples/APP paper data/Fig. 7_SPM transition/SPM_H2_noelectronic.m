@@ -35,15 +35,16 @@ gas.temperature = 288; % K
 gas.pressure = 1e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 800e-9; % m
-gas.gas_material = 'H2';
-gas.delta = 300e-9; % m; wall thickness of anti-resonant fibers
-gas.f_FEM = 1e-2; % loss factor
+gas.material = 'H2';
+gas.num_tubes = 7; % the number of tubes in the anti-resonant fiber
+gas.r_tube = 12.5e-6; % m; the tube radius (not core!)
+gas.t_tube = 300e-9; % m; the tube's wall thickness of anti-resonant fibers
 gas.fiber_type = 'AR_HC_PCF';
 gas.xy_sampling = 101;
 
 [fiber,sim,gas] = gas_info(fiber,sim,gas,lambda*1e-9);
 fiber.betas = fiber.betas*0;
-sim.X3 = sim.X3*0;
+fiber.X3 = fiber.X3*0;
 
 %% Initial condition and Propagate
 peak_power = 1e3/0.3;

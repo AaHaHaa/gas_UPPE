@@ -8,7 +8,7 @@ function beta = recompute_beta_gradient_pressure(wavelength,eta,gas)
 %   gas.coeff_beta_with_eta = gas.k0.^2./gas.beta_no_gas is a pre-calculated coefficient in calculating the propagation constant.
 
 %% Refractive index
-switch gas.gas_material
+switch gas.material
     case 'H2'
         n_gas = sqrt((gas.permittivity_r - 1)*eta + 1); % refractive index of the gas
         

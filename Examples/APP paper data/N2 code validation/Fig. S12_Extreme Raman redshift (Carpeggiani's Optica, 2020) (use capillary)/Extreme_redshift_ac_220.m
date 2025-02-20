@@ -39,7 +39,7 @@ gas.temperature = 300; % K
 gas.pressure = 0.9*1e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 1030e-9; % m
-gas.gas_material = 'N2';
+gas.material = 'N2';
 gas.fiber_type = 'no_coating';
 gas.xy_sampling = 101;
 
@@ -61,5 +61,5 @@ fiber_calc_pulse_speed.SR = fiber.SR*1e-30;
 output_calc_pulse_speed = UPPE_propagate(fiber_calc_pulse_speed,initial_condition,sim,gas);
 
 %%
-save(sprintf('redshift_%s_%.1fm_%uum_%2.1fbar.mat',gas.gas_material,fiber.L0,gas.core_radius*2*1e6,gas.pressure/1e5),'-v7.3',...
+save(sprintf('redshift_%s_%.1fm_%uum_%2.1fbar.mat',gas.material,fiber.L0,gas.core_radius*2*1e6,gas.pressure/1e5),'-v7.3',...
      'c','dt','f','f_range','fiber','gas','lambda','Nt','num_save','prop_output','sim','t','time_window','wavelength_range','output_calc_pulse_speed');

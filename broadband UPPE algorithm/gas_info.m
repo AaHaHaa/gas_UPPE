@@ -28,7 +28,7 @@ eta = gas.pressure/pressure0*temperature0/gas.temperature;
 % Number density of the gas
 gas.Ng = gas.pressure/k/gas.temperature; % m^(-3)
 
-if ismember(gas.gas_material,{'H2','N2','O2','air','CH4'})
+if ismember(gas.material,{'H2','N2','O2','air','CH4'})
     gas = Raman_model(gas,eta); % Obtain the Raman parameters according to the gas
 else % no Raman
     sim.include_Raman = false;
@@ -76,7 +76,7 @@ n_eff = real(fiber.betas./(2*pi./wavelength));
 %    "Generation of 0.1-TW 5-fs optical pulses at a 1-kHz repetition rate," Opt. Lett. 22(20), 1562-1564 (1997)
 % 2. Suda et al.,
 %    "Generation of sub-10-fs, 5-mJ-optical pulses using a hollow fiber with a pressure gradient," Appl. Phys. Lett. 86, 111116 (2005)
-switch gas.gas_material
+switch gas.material
     case 'H2' % m^2/(W*atm)
               % This value is taken from Wahlstrand, et al., 
               % "Absolute measurement of the ultrafast nonlinear electronic and rovibrational response in H2 and D2" (2015)
@@ -117,29 +117,29 @@ switch gas.gas_material
               % "Pulse propagation in hollow-core fiber at high-pressure regime: application to compression of tens of ?J pulses and determination of nonlinear refractive index of xenon at 1.03um" Applied Optics (2018)
         n2 = 50.1e-24;
     case 'Ar' % m^2/(W*atm)
-              % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
+              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
         n2 = 7.96e-24;
     case 'Ne' % m^2/(W*atm)
-              % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
+              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
         n2 = 0.85e-24;
     case 'He' % m^2/(W*atm)
-              % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
+              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
         n2 = 0.34e-24;
     case 'Kr' % m^2/(W*atm)
-              % From Carsten Br�e, Ayhan Demircan, and G�nter Steinmeyer,
+              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
               % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
         n2 = 18.9e-24;
     case 'CH4'
         n2 = 3.118e-23; % m^2/(W*atm)
 end
-sim.X3 = (n2/3*4*permittivity0.*n_eff.^2*c)*eta; % m^2/V^2
+fiber.X3 = (n2/3*4*permittivity0.*n_eff.^2*c)*eta; % m^2/V^2
 
 %% Ionization potential
 if sim.photoionization_model ~= 0
-    switch gas.gas_material % from "NIST Chemistry WebBook"
+    switch gas.material % from "NIST Chemistry WebBook"
         case 'H2'
             ionization_energy = 15.42593; % eV
             

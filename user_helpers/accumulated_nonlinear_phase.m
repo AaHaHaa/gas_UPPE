@@ -25,19 +25,19 @@ time_window = Nt*prop_output.dt;
 Aeff = 1/fiber.SR(1);
 
 %% Nonlinear constant at the pulse's center frequency
-omegas = 2*pi*(linspace(-floor(Nt/2), floor((Nt-1)/2), Nt))'/time_window; % in 1/ps, in the order that the ifft gives
-real_omegas = (omegas + 2*pi*sim.f0)*1e12; % Hz
+Omega = 2*pi*(linspace(-floor(Nt/2), floor((Nt-1)/2), Nt))'/time_window; % in 1/ps, in the order that the ifft gives
+omega = (Omega + 2*pi*sim.f0)*1e12; % Hz
 permittivity0 = 8.85418782e-12;
-prefactor = {real_omegas/4./sim.mode_profiles.norms(:,1).^4,... % I use the 1st mode for norm^4 computation.
+prefactor = {omega/4./sim.mode_profiles.norms(:,1).^4,... % I use the 1st mode for norm^4 computation.
              ...                                                % This can create certain amount of deviation for higher-order modes, but it should be acceptable; otherwise, the computation is too heavy.
-             3*permittivity0*sim.X3/4}; % for Kerr term
+             3*permittivity0*fiber.X3/4}; % for Kerr term
 
 % Find the nonlinear constant at the pulse center frequency
 spectrum = sum(abs(fftshift(ifft(prop_output.fields),1)).^2,2);
-omega0 = sum(real_omegas.*spectrum,1)./sum(spectrum,1); % 2*pi*THz; the pulse center frequency (under shifted omega)
+omega0 = sum(omega.*spectrum,1)./sum(spectrum,1); % 2*pi*THz; the pulse center frequency (under shifted omega)
 idx0 = zeros(1,1,length(prop_output.z));
 for zi = 1:length(prop_output.z)
-    idx0(zi) = find(real_omegas>omega0(zi),1);
+    idx0(zi) = find(omega>omega0(zi),1);
 end
 prefactor{1} = permute(prefactor{1}(idx0),[2,3,1]); % (general) nonlinear constant
 prefactor{2} = permute(prefactor{2}(idx0),[2,3,1]); % nonlinear prefactor for the Kerr term

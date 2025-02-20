@@ -60,15 +60,15 @@ gas.temperature = 273.15 + 25; % K
 gas.pressure = 2.7*1e5; % Pa; gas pressure
 gas.wavelength_order = 6; % The code recomputes the propagation constant to ensure that it has smooth higher-order derivatives up this order; set this to 6, currently maximum implemented value in mySpline.cu, all the time
 gas.mode_profile_wavelength = 800e-9; % m; the wavelength of the mode profile used to compute SR values and overlap integrals, etc.
-gas.gas_material = 'Xe';
-gas.delta = 300e-9; % m; wall thickness of Kagome fibers
+gas.material = 'Xe';
+gas.t_tube = 300e-9; % m; wall thickness of Kagome fibers
 gas.fiber_type = 'Kagome';
 gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles for SR values and overlap integrals, etc.
 
 % Load hollow-core fiber parameters based on the configured parameters
 %
 % gas.Ng - 1/m^3; gas number density
-% gas.(gas.gas_material).(Raman_type).(Raman_parameters)
+% gas.(gas.material).(Raman_type).(Raman_parameters)
 [fiber,sim,gas] = gas_info(fiber,sim,gas,lambda*1e-9);
 
 %% Initial condition

@@ -2,7 +2,7 @@ function gas = Raman_model( gas,eta )
 %RAMAN_MODEL It calculates the Raman response of several materials.
 %   Input:
 %       gas: a structure containing
-%           gas.gas_material
+%           gas.material
 %           gas.pressure
 %           gas.temperature
 %       eta: gas density (amagat)
@@ -16,7 +16,7 @@ hbar = h/(2*pi); % J*s
 k = 1.38064852e-23; % Boltzmann constant (SI unit)
 au_polarizability = 1.64878e-41; % F*m^2; atomic unit
 
-switch gas.gas_material
+switch gas.material
     case 'H2'
         % T1
         T1 = 1.555e3; % ps
@@ -71,7 +71,7 @@ switch gas.gas_material
         gas.H2 = struct('R', rot,...
                         'V', vib);
     case {'N2','O2','air'}
-        if ismember(gas.gas_material,{'N2','air'})
+        if ismember(gas.material,{'N2','air'})
             % T2
             rot.T2 = 1e6/(pi*3570*eta); % ps
             % Current reference has only T2 = 1e6/(pi*22.5)
@@ -129,7 +129,7 @@ switch gas.gas_material
             rot.preR = gas.Ng*1/60/hbar*rot.gamma^2*(rho(rot_J)-rho(rot_J+2)).*(rot_J+2).*(rot_J+1)./(2*rot_J+3);
             vib.preR = gas.Ng*vib.Dalpha^2/4.*(2*vib_J+1).*rho(vib_J)./(vib.omega*1e12);
 
-            if isequal(gas.gas_material,'air')
+            if isequal(gas.material,'air')
                 N2_ratio_in_air = 0.79;
                 rot.preR = rot.preR*N2_ratio_in_air;
                 vib.preR = vib.preR*N2_ratio_in_air;
@@ -138,7 +138,7 @@ switch gas.gas_material
             gas.N2 = struct('R', rot,...
                             'V', vib);
         end
-        if ismember(gas.gas_material,{'O2','air'})
+        if ismember(gas.material,{'O2','air'})
             % T2
             rot.T2 = 1e6/(pi*1701*eta); % ps
             % T2 should be strongly pressure-dependent; however, there is
@@ -187,7 +187,7 @@ switch gas.gas_material
             rot.preR = gas.Ng*1/60/hbar*rot.gamma^2*(rho(rot_J)-rho(rot_J+2)).*(rot_J+2).*(rot_J+1)./(2*rot_J+3);
             vib.preR = gas.Ng*vib.Dalpha^2/4.*(2*vib_J+1).*rho(vib_J)./(vib.omega*1e12);
             
-            if isequal(gas.gas_material,'air')
+            if isequal(gas.material,'air')
                 O2_ratio_in_air = 0.21;
                 rot.preR = rot.preR*O2_ratio_in_air;
                 vib.preR = vib.preR*O2_ratio_in_air;

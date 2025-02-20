@@ -6,7 +6,7 @@ permittivity0 = 8.85e-12;
 
 load('H2-filled_PCF.mat');
 
-spectrum = abs(fftshift(ifft(prop_output.fields),1)).^2;
+spectrum = abs( abs(fftshift(ifft(prop_output.fields+prop_output.shot_noise),1)).^2 - abs(fftshift(ifft(prop_output.shot_noise),1)).^2 );
 spectrum = squeeze(spectrum(:,1,:)).';
 log_spectrum = 10*log10(spectrum); log_spectrum = log_spectrum - max(log_spectrum(:));
 

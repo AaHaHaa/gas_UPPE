@@ -30,7 +30,7 @@ gas.temperature = 273.15 + 25; % K
 gas.pressure = 20*1e5; % Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 800e-9; % m
-gas.gas_material = 'H2';
+gas.material = 'H2';
 gas.fiber_type = 'MWLW_coating';
 gas.xy_sampling = 101;
 

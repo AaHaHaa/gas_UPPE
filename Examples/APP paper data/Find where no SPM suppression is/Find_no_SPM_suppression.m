@@ -12,7 +12,7 @@ pump_omega = c./pump_wavelength*2*pi; % THz
 Stokes_omega = pump_omega - gas.H2.V.omega(2);
 
 %% contributions
-X3 = interp1(f*2*pi,sim.X3,pump_omega);
+X3 = interp1(f*2*pi,sim.X3,pump_omega); % H2 is from the old code which saves X3 in "sim"
 permittivity0 = 8.85e-12;
 electronic_contribution = 3/4*permittivity0*X3;
 

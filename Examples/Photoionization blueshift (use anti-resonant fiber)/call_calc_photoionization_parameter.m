@@ -7,7 +7,7 @@ addpath('../../user_helpers');
 
 load('photoionization_blueshift_5.6uJ.mat');
 
-[Keldysh_parameter,W,ne,g] = calc_photoionization_parameter(prop_output,fiber,sim,gas.gas_material);
+[Keldysh_parameter,W,ne,g] = calc_photoionization_parameter(prop_output,fiber,sim,gas.material);
 
 [max_peak_power,max_idx] = max(abs(prop_output.fields));
 [~,global_max_peak_power_idx] = max(max_peak_power);

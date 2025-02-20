@@ -8,7 +8,7 @@ function [Raw,Rbw,...
 %       sim.include_Raman
 %       sim.gpu_yes
 %   gas: a structure containing
-%       gas.gas_material
+%       gas.material
 %       gas.model
 %       gas.(H2, N2, O2, CH4, or air)
 %   time_window: the size of the time window (ps)
@@ -34,7 +34,7 @@ if sim.include_Raman
             if sim.gpu_yes
                 gas_eqn.R_downsampling = gpuArray(gas_eqn.R_downsampling);
             end
-            switch gas.gas_material
+            switch gas.material
                 case 'H2'
                     R = [sum(gas.H2.R.preR.*exp(-T/gas.H2.R.T2).*exp(1i*gas.H2.R.omega.*T),2),...
                          sum(gas.H2.V.preR.*exp(-T/gas.H2.V.T2).*exp(1i*gas.H2.V.omega.*T),2)]*acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
@@ -62,7 +62,7 @@ if sim.include_Raman
                              'upsampling_zeros', upsampling_zeros,...
                              'n',n);
 
-            switch gas.gas_material
+            switch gas.material
                 case 'H2'
                     R = [sum(gas.H2.R.preR.*exp(-T/gas.H2.R.T2).*exp(1i*gas.H2.R.omega.*T),2),...
                          sum(gas.H2.V.preR.*exp(-T/gas.H2.V.T2).*exp(1i*gas.H2.V.omega.*T),2)]*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
@@ -87,7 +87,7 @@ if sim.include_Raman
     clear T upsampling_zeros R;
     
     % Raman response (under frequency domain for the convolution operation later)
-    switch gas.gas_material
+    switch gas.material
         case {'H2','N2','O2','air'}
             Rw_vib = sum(Rw(:,2:2:end),2);
             Rw_rot = sum(Rw(:,1:2:end),2);

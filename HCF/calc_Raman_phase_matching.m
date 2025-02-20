@@ -11,7 +11,7 @@ num_disp_orders = 3;
 use_gpu = false;%true;
 
 load('info_MWLW_coating_CH4_200um_10atm.mat');
-gas_material = 'CH4';
+material = 'CH4';
 
 c = 2.99792458e-4; % speed of ligth; m/ps
 
@@ -86,7 +86,7 @@ AS2_V_idx = find(f>f2_AS_V,1); f2_AS_V = f(AS2_V_idx); beta_AS2_V = new_beta(AS2
 
 
 %% Nonlinear coefficient
-switch gas_material
+switch material
     case 'H2' % m^2/(W*atm)
               % This value is taken from Wahlstrand, et al., 
               % "Absolute measurement of the ultrafast nonlinear electronic and rovibrational response in H2 and D2" (2015)

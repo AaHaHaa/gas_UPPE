@@ -7,7 +7,7 @@ function [beta,SR,mode_profile] = solve_for_EH_MWLW_coating_beta_func(wavelength
 %                    It contains two fields, range and num
 %        order: make sure that the propagation constant have smooth 
 %               higher-order derivatives up this order
-%        gas_material: 'H2','air','N2','O2','Ar','Xe','Kr','Ne','He'
+%        material: 'H2','air','N2','O2','Ar','Xe','Kr','Ne','He'
 
 % The order of modes, based on propagation constant (beta), is found by
 % running "find_order_of_EH_modes" first.
@@ -24,7 +24,7 @@ sep_pos = strfind(current_path,sep_char);
 current_folder = current_path(1:sep_pos(end));
 upper_folder = current_path(1:sep_pos(end-2));
 addpath(current_folder);
-addpath(fullfile(upper_folder,'gas absorption spectra'));
+addpath(fullfile(upper_folder,'Gas absorption spectra'));
 
 Nf = uint32(length(wavelength));
 
@@ -33,74 +33,7 @@ gas_wavelength = wavelength; % m
 gas_f = c./gas_wavelength*1e-9; % THz
 
 %% Refractive index
-
-% Reference:
-% 1. Walter G., et el, "On the Dependence of the Refractive Index of Gases on Temperature" (1903)
-% 2. Arthur L. Ruoff and Kouros Ghandehari, "THE REFRACTIVE INDEX OF HYDROGEN AS A FUNCTION OF PRESSURE" (1993)
-
-[a,b] = Sellmeier_coefficients(gas.gas_material); % Sellmeier coefficients
-Sellmeier_terms = @(lambda,a,b) a.*lambda.^2./(lambda.^2 - b.^2);
-switch gas.gas_material
-    case 'H2'
-        %n_gas = calc_n_H2(gas_wavelength*1e9,sim.cuda_dir_path,gas.wavelength_order);
-        n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        permittivity_r = n_from_Sellmeier(0.120).^2;
-        n_gas_120 = sqrt((permittivity_r - 1)*eta + 1); %  % Sellmeier is valid only above 164nm
-        n_gas(gas_wavelength<120e-9) = n_gas_120;
-        
-        % pressure-induced absorption
-        Raman_absorption = read_absorption(gas.gas_material,gas_wavelength,eta);
-        n_gas = n_gas + 1i*Raman_absorption./(2*pi./gas_wavelength);
-    case 'O2'
-        n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        permittivity_r = n_from_Sellmeier(0.4).^2;
-        n_gas_400 = sqrt((permittivity_r - 1)*eta + 1); %  % Sellmeier is valid only above 164nm
-        n_gas(gas_wavelength<120e-9) = n_gas_400;
-        
-        % pressure-induced absorption
-        Raman_absorption = read_absorption(gas.gas_material,gas_wavelength,eta);
-        n_gas = n_gas + 1i*Raman_absorption./(2*pi./gas_wavelength);
-    case {'air','N2'}
-        n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        % pressure-induced absorption
-        Raman_absorption = read_absorption(gas.gas_material,gas_wavelength,eta);
-        n_gas = n_gas + 1i*Raman_absorption./(2*pi./gas_wavelength);
-    case {'Ar','Ne','He'}
-        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-    case {'Xe','Kr'}
-        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        permittivity_r = n_from_Sellmeier(0.113).^2;
-        n_gas_113 = sqrt((permittivity_r - 1)*eta + 1); % Sellmeier is valid only above ~113nm
-        n_gas(gas_wavelength<113e-9) = n_gas_113;
-    case 'CH4'
-        n_from_Sellmeier = @(lambda) sqrt(1+sum(Sellmeier_terms(lambda,a,b),2));
-        
-        permittivity_r = n_from_Sellmeier(gas_wavelength*1e6).^2;
-        n_gas = sqrt((permittivity_r - 1)*eta + 1); % refractive index of the gas
-        
-        % Avoid the singularity at resonances
-        idx_resonance = n_gas < 1;
-        n_gas(idx_resonance) = 1;
-end
+n_gas = find_n_gas(gas.material,gas_wavelength,eta);
 
 %%
 
@@ -109,10 +42,10 @@ user_midx = [1,4,9,17,28,40]; % a maximum of 6 circular symmetric modes included
 user_midx = user_midx(sim.midx);
 num_modes = length(user_midx);
 
-n_out = calc_n_silica(gas_wavelength*1e9,sim.gpu_yes,sim.cuda_dir_path,gas.wavelength_order);
+n_silica = calc_n_silica(gas_wavelength*1e9,sim.gpu_yes,sim.cuda_dir_path,gas.wavelength_order);
 
 % MWLW coating
-n_out(gas_wavelength>2e-6) = real(n_out(gas_wavelength>2e-6));
+n_silica(gas_wavelength>2e-6) = real(n_silica(gas_wavelength>2e-6));
 
 %%
 load(fullfile(current_folder,'nm_order.mat'),'sorted_nm');
@@ -134,7 +67,7 @@ for midx = 1:num_modes*2
         mode{midx} = 'EH';
     end
     
-    ZdYd(:,midx) = calc_ZdYd(n_gas,n_out,mode{midx});
+    ZdYd(:,midx) = calc_ZdYd(n_gas,n_silica,mode{midx});
     
     % unm: zeros of the Bessel function of the first kind
     u = besselzero(nm(1,midx)-1,nm(2,midx),1);
@@ -200,7 +133,7 @@ abs_ki = interp1(gas_f,abs(ki),c*1e-9/target_wavelength);
 ang_ki = interp1(gas_f,unwrap(angle(ki),[],1),c*1e-9/target_wavelength);
 target_ki = abs_ki.*exp(1i*ang_ki);
 
-target_n_out = interp1(gas_f,n_out,c*1e-9/target_wavelength); % for real n_out
+target_n_out = interp1(gas_f,n_silica,c*1e-9/target_wavelength); % for real n_out
 target_k0 = interp1(gas_f,k0,c*1e-9/target_wavelength);
 
 % "GPU besselj" doesn't allow complex double" input, so I need to gather 

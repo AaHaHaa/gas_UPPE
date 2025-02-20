@@ -9,20 +9,15 @@ addpath('../user_helpers');
 num_disp_orders = 3;
 use_gpu = false;%true;
 
-load('info_AR_HC_PCF_N2_30um_100atm_300nm.mat','beta','wavelength');
+load('info_AR_HC_PCF_N2_60um_25atm_360nm.mat','beta','wavelength');
 
 c = 2.99792458e-4; % speed of ligth; m/ps
 
 Nf = size(beta,1);
 num_modes = size(beta,2);
 
-wavelength_min = 0.1; % um
-wavelength_max = 10; % um
-
-% Show the Stokes,pump,anti-Stokes phase matching condition 
-wavelength_pump = 1.03; % um
-Stokes_shift_V = 125;
-Stokes_shift_R = 17.6;
+wavelength_min = 0.8; % um
+wavelength_max = 2; % um
 
 %% Calculate the propagation constants
 wavelength = wavelength*1e6; % um
@@ -141,15 +136,3 @@ xlim([wavelength_min,wavelength_max]);
 set(gca,'fontsize',20);
 xlabel('Wavelength (\mum)');
 ylabel('\beta_2 (fs^2/mm)');
-%{
-figure;
-for midx = 1:num_modes
-    h = plot(wavelength_full{3}, beta_full{3}(:,midx).*(-2*pi*3e8./wavelength_full{3}.^2/1e9)); hold on;
-    set(h,'linewidth',2);
-end
-hold off;
-xlim([wavelength_min,wavelength_max]);
-set(gca,'fontsize',20);
-xlabel('Wavelength (\mum)');
-ylabel('D (ps/nm/km)');
-%}
