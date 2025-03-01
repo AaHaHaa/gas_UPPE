@@ -3,6 +3,9 @@ This is the shared package to simulate pulse propagation in a gas-filled hollow-
 
 It is useful for simulating pulse compression in gases, Raman physics (e.g. soliton self-frequency shift, Raman generation, or multidimensional solitary state generation), and photoionization-induced blueshift, etc.
 
+> [!CAUTION]
+> Ar refractive index was wrong! Please update the code. I fixed the constant-pressure one on 2/20. I just fixed the gradient-pressure one (2/28). I'll keep this note here for a few days.
+
 ## Capabilities:
 1. It solves the pulse propagation with
    - [RK4IP](http://www.sciencedirect.com/science/article/pii/S0010465512004262) (Runge-Kutta under the interaction picture) if single-mode.
@@ -89,5 +92,5 @@ I extended the photoionization model to gases other than H<sub>2</sub> and He.
 Fixed Ar $n_2$ to the should-be correct value. See the comment in `gas_info()` for details.
 * 10/29/2024:<br>
 Update the code with the newly-developed noise model with [the finally-published paper](https://doi.org/10.48550/arXiv.2410.20567).
-* 2/20/2025:<br>
-Ar refractive index was wrong! I fixed it.
+* 2/28/2025:<br>
+Ar refractive index was wrong! I fixed it. I just fixed the gradient-pressure one.

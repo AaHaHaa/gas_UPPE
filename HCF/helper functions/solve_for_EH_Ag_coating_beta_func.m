@@ -1,4 +1,5 @@
-function [beta,SR,mode_profile] = solve_for_EH_Ag_coating_beta_func(wavelength,eta,sim,gas)
+function [beta,SR,mode_profile] = solve_for_EH_Ag_coating_beta_func(wavelength,eta,sim,gas,...
+                                                                    mixed_eta)
 %   
 %   wavelength: wavelength points in simulations (m)
 %   eta: gas density (amagats)
@@ -34,6 +35,14 @@ gas_f = c./gas_wavelength*1e-9; % THz
 
 %% Refractive index
 n_gas = find_n_gas(gas.material,gas_wavelength,eta);
+
+if isfield(gas,'mixed_material') && ~isempty(gas.mixed_material)
+    for mat_i = 1:length(gas.mixed_material) % mixed gases
+        n_gas_i = find_n_gas(gas.mixed_material{mat_i},gas_wavelength,mixed_eta);
+
+        n_gas = n_gas + n_gas_i;
+    end
+end
 
 %%
 

@@ -17,11 +17,11 @@ use_gpu = false; % GPU
 
 material = 'N2';
 
-pressure = 40; % atm
+pressure = 0; % atm
 temperature = 288.15; % 15 degree Celsius
-core_radius = 30e-6; % core radius; m
+core_radius = 15e-6; % core radius; m
 
-t_tube = 360e-9; % m; revolver-wall thickness
+t_tube = 100e-9; % m; revolver-wall thickness
 
 % Empirical model by Vincetti:
 % 1. Vincetti et al., "Empirical formulas for calculating loss in hollow
