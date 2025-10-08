@@ -196,7 +196,7 @@ if sim.include_Raman
         case 'CH4'
             max_Omega = max(gas.(gas.material).V.omega.*(gas.(gas.material).V.preR~=0));
             max_T2 = max(gas.(gas.material).V.T2.*(gas.(gas.material).V.preR~=0));
-        case {'H2','N2','O2'}
+        case {'H2','D2','N2','O2'}
             max_Omega = max([gas.(gas.material).R.omega.*(gas.(gas.material).R.preR~=0),...
                              gas.(gas.material).V.omega.*(gas.(gas.material).V.preR~=0)]);
             max_T2 = max([gas.(gas.material).R.T2.*(gas.(gas.material).R.preR~=0),...
