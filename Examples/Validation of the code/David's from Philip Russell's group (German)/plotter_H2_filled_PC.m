@@ -12,7 +12,7 @@ log_spectrum = 10*log10(spectrum); log_spectrum = log_spectrum - max(log_spectru
 
 figure;
 pcolor(3e5./f,prop_output.z*100,log_spectrum); shading interp;
-cmap = whitejet_lower; colormap(cmap); caxis([-60,0]);
+cmap = whitejet_lower; colormap(cmap); caxis([-50,0]);
 c = colorbar; ylabel(c,'Intensity (dB)');
 xlim([400,2000]);
 set(gca,'fontsize',20);

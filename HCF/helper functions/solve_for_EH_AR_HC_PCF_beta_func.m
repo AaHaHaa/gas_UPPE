@@ -1,5 +1,4 @@
-function [beta,SR,mode_profile] = solve_for_EH_AR_HC_PCF_beta_func(wavelength,eta,sim,gas,...
-                                                                   mixed_eta)
+function [beta,SR,mode_profile] = solve_for_EH_AR_HC_PCF_beta_func(wavelength,eta,sim,gas)
 %   
 %   wavelength: wavelength points in simulations (m)
 %   eta: gas density (amagats)
@@ -34,17 +33,17 @@ gas_wavelength = wavelength; % m
 gas_f = c./gas_wavelength*1e-9; % THz
 
 %% Refractive index
-[n_gas,imag_k_gas] = find_n_gas(gas.material,gas_wavelength,eta);
-n_gas = real(n_gas);
+% Summation of the index, real(n), is based on permittivity
+% The loss, however, is directly summable.
+num_gas = length(gas.material);
+n_gas = 1; % initialization
+imag_k_gas = 0; % initialization
+for gas_i = 1:num_gas
+    [n_gas_i,imag_k_gas_i] = find_n_gas(gas.material{gas_i},gas_wavelength,eta(gas_i));
+    n_gas_i = real(n_gas_i);
 
-if isfield(gas,'mixed_material') && ~isempty(gas.mixed_material)
-    for mat_i = 1:length(gas.mixed_material) % mixed gases
-        [n_gas_i,imag_k_gas_i] = find_n_gas(gas.mixed_material{mat_i},gas_wavelength,mixed_eta);
-        n_gas_i = real(n_gas_i);
-
-        n_gas = n_gas + n_gas_i;
-        imag_k_gas = imag_k_gas + imag_k_gas_i;
-    end
+    n_gas = sqrt(1 + (n_gas.^2-1) + (n_gas_i.^2-1));
+    imag_k_gas = imag_k_gas + imag_k_gas_i;
 end
 
 %% Loss
@@ -57,7 +56,8 @@ end
 delta_tube = abs(((gas.core_radius/gas.r_tube + 1)*sin(pi/gas.num_tubes) - 1)*(2*gas.r_tube));
 
 alpha_empirical = loss_AR_HC_PCF(wavelength,...
-                                 gas.num_tubes,gas.r_tube,gas.t_tube,delta_tube);
+                                 gas.num_tubes,gas.r_tube,gas.t_tube,delta_tube,...
+                                 sim.gpu_yes,sim.cuda_dir_path);
 
 %target_wavelength = wavelength(floor(length(wavelength)/2)+1); % m
 target_wavelength = gas.mode_profile_wavelength; % m
@@ -214,7 +214,7 @@ for midx = 1:num_modes*2
 end
 norm = sqrt(sum(sum(sum(abs(mode_profiles).^2,5).*r*dr*dtheta,3),4));
 nonzero_idx = norm~=0;
-mode_profiles(nonzero_idx) = mode_profiles(nonzero_idx)./norm(nonzero_idx);
+mode_profiles(1,nonzero_idx,:,:,:) = mode_profiles(1,nonzero_idx,:,:,:)./norm(1,nonzero_idx,:,:,:);
 
 % Transform into (x,y) basis
 if sim.gpu_yes

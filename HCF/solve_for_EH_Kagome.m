@@ -13,13 +13,13 @@ addpath('helper functions','../Gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-material = 'Xe';
+material = {'Xe'};
 
-pressure = 2.7; % atm
+pressure = [2.7]; %#ok atm
 temperature = 288.15; % 15 degree Celsius
 core_radius = 13.5e-6; % core radius; m
 
-delta = 1000e-9; % m; wall thickness
+t_tube = 1000e-9; % m; wall thickness
 
 % Wavelength sampling for the propagation constant and the loss
 num_wavelength = 1e5;
@@ -43,17 +43,26 @@ pressure = pressure*1.01325e5; % Pa
 pressure0 = 1.01325e5; % Pa
 temperature0 = 273.15; % 0 degree Celsius
 eta = (pressure/temperature)/(pressure0/temperature0); % gas density (in amagat)
-n_gas = find_n_gas(material,wavelength*1e-9,eta);
+% Summation of the index, real(n), is based on permittivity
+% The loss, however, is directly summable.
+num_gas = length(material);
+n_gas = 1; % initialization
+for gas_i = 1:num_gas
+    n_gas_i = find_n_gas(material{gas_i},wavelength*1e-9,eta(gas_i));
+    n_gas = sqrt(1 + (real(n_gas).^2-1) + (real(n_gas_i).^2-1)) + 1i*(imag(n_gas)+imag(n_gas_i));
+end
 
 cuda_dir_path = '../cuda';
 diff_order = 6;
 n_silica = calc_n_silica(wavelength,use_gpu,cuda_dir_path,diff_order);
 
-if abs(round(pressure/1.01325e5)-pressure/1.01325e5) < eps(1) % pressure is an integer number of atm
-    saved_filename = sprintf('info_Kagome_%s_%dum_%datm_%dnm.mat',material,core_radius*2*1e6,pressure/1.01325e5,delta*1e9);
+material_name = sprintf('%s',material{:});
+if all(abs(round(pressure/1.01325e5)-pressure/1.01325e5) < eps(1)) % pressure is an integer number of atm
+    pressure_name = sprintf('%d',pressure/1.01325e5);
 else
-    saved_filename = sprintf('info_Kagome_%s_%dum_%.1fatm_%dnm.mat',material,core_radius*2*1e6,pressure/1.01325e5,delta*1e9);
+    pressure_name = sprintf('%.1f',pressure/1.01325e5);
 end
+saved_filename = sprintf('info_Kagome_%s_%dum_%satm_%dnm.mat',material_name,core_radius*2*1e6,pressure_name,t_tube*1e9);
 
 %%
 % the mode index
@@ -103,7 +112,7 @@ end
 
 s = 0.065;
 a_AP = 1.075*core_radius; % area-preserving core radius
-a_c = a_AP./(1+s*(wavelength*1e-9).^2/a_AP/delta);
+a_c = a_AP./(1+s*(wavelength*1e-9).^2/a_AP/t_tube);
 
 % the below simplest ki removes all the loss
 ki = complex(unm./a_c);

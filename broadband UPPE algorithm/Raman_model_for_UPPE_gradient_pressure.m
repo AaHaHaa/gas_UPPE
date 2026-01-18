@@ -19,7 +19,7 @@ function gas_eqn = precalc_gas_params(sim,gas,Nt,...
 %   gas: a structure containing
 %       gas.material
 %       gas.model
-%       gas.(H2, N2, O2, CH4, or air)
+%       gas.(H2, D2, N2, O2, air, CH4, N2O, CO2)
 %   time_window: the size of the time window (ps)
 %   Nt: the number of time points in the simulation
 %   gas_Nt: the number of time points in the simulation
@@ -74,14 +74,21 @@ if sim.include_Raman
     end
     gas_eqn.m2 = m2; % record the index for rearrangement which will be useful later
     
-    switch gas.material
-        case {'H2','N2','O2'}
-            gas_eqn.num_Raman = 2;
-        case 'air'
-            gas_eqn.num_Raman = 4;
-        case 'CH4'
-            gas_eqn.num_Raman = 1;
+    num_gas = length(gas.material);
+    num_Raman = zeros(1,length(gas.material));
+    for gas_i = 1:num_gas
+        switch gas.material{gas_i}
+            case {'H2','D2','N2','O2','air'}
+                num_Raman_i = 2;
+            case {'N2O','CO2','CH4'}
+                num_Raman_i = 1;
+            otherwise
+                num_Raman_i = 0;
+        end
+        num_Raman(gas_i) = num_Raman_i;
     end
+    cumsum_num_Raman = [0,cumsum(num_Raman)];
+    gas_eqn.cumsum_num_Raman = cumsum_num_Raman; % for outputing the delta_permittivity in scalar situations
 else % no Raman
     gas_eqn = struct('Nt',gas_Nt,'dt',gas_dt,'upsampling_zeros', upsampling_zeros,'n',n);
 end
@@ -92,11 +99,13 @@ end
 function [gas_i,...
           gas,gas_eqn,...
           Raw,Rbw,...
+          sim_betas,...
           D_op,D_op_upsampling] = update_R_D(fiber,sim,gas,gas_eqn,...
                                              gas_pressure_steps,...
                                              gas_pressure,eta,...
                                              time_window,...
-                                             Omega,wavelength)
+                                             Omega,...
+                                             dt,fields)
 %UPDATE_R_D It updates Raman and dispersion at a specified gas pressure
 %(eta)
 
@@ -105,36 +114,54 @@ if sim.gpu_yes
     T = gpuArray(T);
 end
 
-if gas.pressure_out > gas.pressure_in % increasing gas pressure
-    gas_i = find(gas_pressure - gas_pressure_steps < 0,1);
-else % decreasing gas pressure
-    gas_i = find(gas_pressure_steps - gas_pressure < 0,1);
+if isfield(gas,'pressure_in') % gradient pressure
+    if gas.pressure_out > gas.pressure_in % increasing gas pressure
+        gas_i = find(gas_pressure - gas_pressure_steps < 0,1);
+    else % decreasing gas pressure
+        gas_i = find(gas_pressure_steps - gas_pressure < 0,1);
+    end
+else % scenarios under constant pressure considering heating
+    gas_i = [];
 end
 % ---------------------------------------------------------------------
+num_gas = length(gas.material);
 if sim.include_Raman
     % Set up some parameters for the gas Raman generation equations
+    if sim.include_heating
+        % Recompute Raman strength, preR, under a different temperature
+        if sim.include_photoionization % "gas" will be regenerated below, so "ionization" needs to be pre-saved and put back to "gas" later
+            gas0 = gas;
+        end
+        gas = Raman_model(gas,eta);
+        if sim.include_photoionization
+            for gas_ii = 1:num_gas
+                gas.(gas.material{gas_ii}).ionization = gas0.(gas.material{gas_ii}).ionization;
+            end
+        end
+    end
     % Because the dephasing time depends on the gas pressure, Raman
     % response needs to be re-calculated.
-    gas = Raman_T2( gas,eta );
+    gas = Raman_T2( gas,eta*gas.pressure_ratio );
     switch gas.model
         case 0
-            switch gas.material
-                case 'H2'
-                    R = [sum(gas.H2.R.preR.*exp(-T/gas.H2.R.T2).*exp(1i*gas.H2.R.omega.*T),2),...
-                         sum(gas.H2.V.preR.*exp(-T/gas.H2.V.T2).*exp(1i*gas.H2.V.omega.*T),2)]*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
-                case 'N2'
-                    R = [sum(gas.N2.R.preR.*exp(-T/gas.N2.R.T2).*exp(1i*gas.N2.R.omega.*T),2),...
-                         sum(gas.N2.V.preR.*exp(-T/gas.N2.V.T2).*exp(1i*gas.N2.V.omega.*T),2)]*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
-                case 'O2'
-                    R = [sum(gas.O2.R.preR.*exp(-T/gas.O2.R.T2).*exp(1i*gas.O2.R.omega.*T),2),...
-                         sum(gas.O2.V.preR.*exp(-T/gas.O2.V.T2).*exp(1i*gas.O2.V.omega.*T),2)]*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
-                case 'air'
-                    R = [sum(gas.N2.R.preR.*exp(-T/gas.N2.R.T2).*exp(1i*gas.N2.R.omega.*T),2),...
-                         sum(gas.N2.V.preR.*exp(-T/gas.N2.V.T2).*exp(1i*gas.N2.V.omega.*T),2),...
-                         sum(gas.O2.R.preR.*exp(-T/gas.O2.R.T2).*exp(1i*gas.O2.R.omega.*T),2),...
-                         sum(gas.O2.V.preR.*exp(-T/gas.O2.V.T2).*exp(1i*gas.O2.V.omega.*T),2)]*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
-                case 'CH4'
-                    R = gas.CH4.V.preR.*exp(-T/gas.CH4.V.T2).*exp(1i*gas.CH4.V.omega.*T)*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
+            R = []; % initialization
+            for gas_ii = 1:num_gas
+                switch gas.material{gas_ii}
+                    case {'H2','D2','N2','O2'} % rotational + vibrational Raman
+                        R_i = [sum(gas.(gas.material{gas_ii}).R.preR.*exp(-T./gas.(gas.material{gas_ii}).R.T2).*exp(1i*gas.(gas.material{gas_ii}).R.omega.*T),2),...
+                               sum(gas.(gas.material{gas_ii}).V.preR.*exp(-T./gas.(gas.material{gas_ii}).V.T2).*exp(1i*gas.(gas.material{gas_ii}).V.omega.*T),2)]*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
+                    case 'air'
+                        R_i = [sum(gas.N2.R.preR.*exp(-T./gas.N2.R.T2).*exp(1i*gas.N2.R.omega.*T),2) + sum(gas.O2.R.preR.*exp(-T./gas.O2.R.T2).*exp(1i*gas.O2.R.omega.*T),2),...
+                               sum(gas.N2.V.preR.*exp(-T./gas.N2.V.T2).*exp(1i*gas.N2.V.omega.*T),2) + sum(gas.O2.V.preR.*exp(-T./gas.O2.V.T2).*exp(1i*gas.O2.V.omega.*T),2)]*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
+                    case 'CH4' % only vibrational Raman
+                        R_i = sum(gas.(gas.material{gas_ii}).V.preR.*exp(-T./gas.(gas.material{gas_ii}).V.T2).*exp(1i*gas.(gas.material{gas_ii}).V.omega.*T),2)*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
+                    case {'N2O','CO2'} % only rotational Raman
+                        R_i = sum(gas.(gas.material{gas_ii}).R.preR.*exp(-T./gas.(gas.material{gas_ii}).R.T2).*exp(1i*gas.(gas.material{gas_ii}).R.omega.*T),2)*gas_eqn.acyclic_conv_stretch(gas_eqn.Nt)*(gas_eqn.dt*1e-12); % acyclic_conv_stretch(gas_Nt)*(gas_dt*1e-12) is due to the DFT-version convolution theorem
+                    otherwise
+                        R_i = [];
+                end
+
+                R = [R,R_i];
             end
             R(isnan(R)) = 0; % in case that some T2=0 such that -T/T2 has a 0/0 term (this happens when the gas pressure is zero)
             % zero-padding in time for the acyclic convolution theorem to avoid time-domain aliasing
@@ -142,23 +169,22 @@ if sim.include_Raman
             gas_eqn.R_delta_permittivity = ifft(R,gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % Raman-induced permittivity change
             Rw = ifft(imag(R),gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1); % Raman response; only "sin()" part matters in Raman computations
         case 1
-            switch gas.material
-                case 'H2'
-                    R = ifft([sum(gas.H2.R.preR.*exp(-T/gas.H2.R.T2).*exp(1i*gas.H2.R.omega.*T),2),...
-                              sum(gas.H2.V.preR.*exp(-T/gas.H2.V.T2).*exp(1i*gas.H2.V.omega.*T),2)],[],1)*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
-                case 'N2'
-                    R = ifft([sum(gas.N2.R.preR.*exp(-T/gas.N2.R.T2).*exp(1i*gas.N2.R.omega.*T),2),...
-                              sum(gas.N2.V.preR.*exp(-T/gas.N2.V.T2).*exp(1i*gas.N2.V.omega.*T),2)],[],1)*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
-                case 'O2'
-                    R = ifft([sum(gas.O2.R.preR.*exp(-T/gas.O2.R.T2).*exp(1i*gas.O2.R.omega.*T),2),...
-                              sum(gas.O2.V.preR.*exp(-T/gas.O2.V.T2).*exp(1i*gas.O2.V.omega.*T),2)],[],1)*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
-                case 'air'
-                    R = ifft([sum(gas.N2.R.preR.*exp(-T/gas.N2.R.T2).*exp(1i*gas.N2.R.omega.*T),2),...
-                              sum(gas.N2.V.preR.*exp(-T/gas.N2.V.T2).*exp(1i*gas.N2.V.omega.*T),2),...
-                              sum(gas.O2.R.preR.*exp(-T/gas.O2.R.T2).*exp(1i*gas.O2.R.omega.*T),2),...
-                              sum(gas.O2.V.preR.*exp(-T/gas.O2.V.T2).*exp(1i*gas.O2.V.omega.*T),2)],[],1)*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
-                case 'CH4'
-                    R = ifft(gas.CH4.V.preR.*exp(-T/gas.CH4.V.T2).*exp(1i*gas.CH4.V.omega.*T),[],1)*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
+            R = []; % initialization
+            for gas_ii = 1:num_gas
+                switch gas.material{gas_ii}
+                    case {'H2','D2','N2','O2'} % rotational + vibrational Raman
+                        R_i = [sum(gas.(gas.material{gas_ii}).R.preR.*exp(-T./gas.(gas.material{gas_ii}).R.T2).*exp(1i*gas.(gas.material{gas_ii}).R.omega.*T),2),...
+                               sum(gas.(gas.material{gas_ii}).V.preR.*exp(-T./gas.(gas.material{gas_ii}).V.T2).*exp(1i*gas.(gas.material{gas_ii}).V.omega.*T),2)]*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
+                    case 'air'
+                        R_i = [sum(gas.N2.R.preR.*exp(-T./gas.N2.R.T2).*exp(1i*gas.N2.R.omega.*T),2) + sum(gas.O2.R.preR.*exp(-T/gas.O2.R.T2).*exp(1i*gas.O2.R.omega.*T),2),...
+                               sum(gas.N2.V.preR.*exp(-T./gas.N2.V.T2).*exp(1i*gas.N2.V.omega.*T),2) + sum(gas.O2.V.preR.*exp(-T/gas.O2.V.T2).*exp(1i*gas.O2.V.omega.*T),2)]*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
+                    case 'CH4'
+                        R_i = sum(gas.(gas.material{gas_ii}).V.preR.*exp(-T./gas.(gas.material{gas_ii}).V.T2).*exp(1i*gas.(gas.material{gas_ii}).V.omega.*T),2)*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
+                    case {'N2O','CO2'} % only rotational Raman
+                        R_i = sum(gas.(gas.material{gas_ii}).R.preR.*exp(-T./gas.(gas.material{gas_ii}).R.T2).*exp(1i*gas.(gas.material{gas_ii}).R.omega.*T),2)*(time_window*1e-12); % (time_window*1e-12) is due to the DFT-version convolution theorem
+                end
+
+                R = [R,R_i];
             end
             R(isnan(R)) = 0; % in case that some T2=0 such that -T/T2 has a 0/0 term (this happens when the gas pressure is zero)
             gas_eqn.R_delta_permittivity = ifft(R,[],1); % Raman-induced permittivity change
@@ -166,13 +192,26 @@ if sim.include_Raman
     end
     
     % Raman response (under frequency domain for the convolution operation later)
-    switch gas.material
-        case {'H2','N2','O2','air'}
-            Rw_vib = sum(Rw(:,2:2:end),2);
-            Rw_rot = sum(Rw(:,1:2:end),2);
-        case 'CH4' % only vib Raman
-            Rw_vib = Rw;
-            Rw_rot = 0; % no rotational Raman for CH4 due to its molecular symmetry
+    Rw_rot = 0; % initialization
+    Rw_vib = 0; % initialization
+    for gas_ii = 1:num_gas
+        switch gas.material{gas_ii}
+            case {'H2','D2','N2','O2','air'} % rotational + vibrational Raman
+                Rw_rot_i = Rw(:,gas_eqn.cumsum_num_Raman(gas_ii)+1);
+                Rw_vib_i = Rw(:,gas_eqn.cumsum_num_Raman(gas_ii)+2);
+            case 'CH4' % only vibrational Raman
+                Rw_rot_i = 0;
+                Rw_vib_i = Rw(:,gas_eqn.cumsum_num_Raman(gas_ii)+1);
+            case {'N2O','CO2'} % only rotational Raman
+                Rw_rot_i = Rw(:,gas_eqn.cumsum_num_Raman(gas_ii)+1);
+                Rw_vib_i = 0;
+            otherwise
+                Rw_rot_i = 0;
+                Rw_vib_i = 0;
+        end
+
+        Rw_rot = Rw_rot + Rw_rot_i;
+        Rw_vib = Rw_vib + Rw_vib_i;
     end
     clear Rw;
     Raw = Rw_vib - 2*Rw_rot; % isotropic Raman response
@@ -208,6 +247,7 @@ if sim.include_Raman
                 Rbw = [Rbw(end-(gas_eqn.m2-1):end);Rbw(1:gas_eqn.m)];
             end
         case 1
+            n = ceil(length(Omega)/2);
             Raw = [Raw(end-(gas_eqn.m2-1):end);Raw(1:n)];
             if ~isempty(Rbw)
                 Rbw = [Rbw(end-(gas_eqn.m2-1):end);Rbw(1:n)];
@@ -218,8 +258,9 @@ else
 end
 % ---------------------------------------------------------------------
 % Calculate the propagation constant based on the current gas pressure
-fiber.betas = recompute_beta_gradient_pressure(wavelength,eta,gas);
-D_op = 1i*(ifftshift(fiber.betas,1)-(sim.betas(1)+sim.betas(2)*Omega));
+fiber.betas = recompute_beta_gradient_pressure(eta,gas);
+sim_betas = calc_sim_betas(fiber,dt,Omega,fields);
+D_op = 1i*(ifftshift(fiber.betas,1)-(sim_betas(1)+sim_betas(2)*Omega));
 % Zero-padding for upsampling computation in RK4IP
 D_op_upsampling = cat(1,D_op(1:gas_eqn.n,:),gas_eqn.upsampling_zeros,D_op(gas_eqn.n+1:end,:));
 

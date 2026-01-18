@@ -59,10 +59,13 @@ if verbose
     factor_correct_unit = (Nt*dt)^2/1e3; % to make the spectrum of the correct unit "nJ/THz"
                                          % "/1e3" is to make pJ into nJ
     spectrum = abs(fftshift(ifft(input_field(:,:,end)),1)).^2*factor_correct_unit;
+    yyaxis left;
     h1 = plot(f,sum(spectrum,2));
     hold on;
     h2 = plot(f,sum(spectrum.*fftshift(mult_factor,1).^2,2),'--');
     hold off;
+    yyaxis right;
+    plot(f,fftshift(mult_factor,1));
     xlabel('Frequency (THz)'); ylabel('Intensity (nJ/THz)');
     title('Spectral filter');
     set(h1,'linewidth',2); set(h2,'linewidth',2);

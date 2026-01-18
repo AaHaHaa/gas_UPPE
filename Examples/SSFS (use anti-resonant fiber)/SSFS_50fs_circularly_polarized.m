@@ -13,8 +13,8 @@ addpath('../../user_helpers','../../broadband UPPE algorithm');
 
 %% Setup parameters
 c = 299792458*1e-12; % m/ps
-wavelength_range = [0.3,3]*1e-6; % m
-Nt = 2^14;
+wavelength_range = [0.7,3]*1e-6; % m
+Nt = 2^13;
 [f0,f_range,time_window,dt] = find_tw_f0(c./wavelength_range,Nt);
 
 sim.f0 = f0;
@@ -59,9 +59,9 @@ gas.temperature = 288; % K
 gas.pressure = 15*1.01325e5; % Pa; gas pressure
 gas.wavelength_order = 6; % The code recomputes the propagation constant to ensure that it has smooth higher-order derivatives up this order; set this to 6, currently maximum implemented value in mySpline.cu, all the time
 gas.mode_profile_wavelength = 1030e-9; % m; the wavelength of the mode profile used to compute SR values and overlap integrals, etc.
-gas.material = 'H2';
+gas.material = {'H2'};
 gas.num_tubes = 7; % the number of tubes in the anti-resonant fiber
-gas.r_tube = 12.5e-6; % m; the tube radius (not core!)
+gas.r_tube = 20e-6; % m; the tube radius (not core!)
 gas.t_tube = 300e-9; % m; the tube's wall thickness of anti-resonant fibers
 gas.fiber_type = 'AR_HC_PCF';
 gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles for SR values and overlap integrals, etc.

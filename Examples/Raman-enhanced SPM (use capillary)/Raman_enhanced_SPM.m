@@ -54,7 +54,7 @@ gas.temperature = 273.15 + 25; % K
 gas.pressure = 20*1e5; % Pa
 gas.wavelength_order = 6; % The code recomputes the propagation constant to ensure that it has smooth higher-order derivatives up this order; set this to 6, currently maximum implemented value in mySpline.cu, all the time
 gas.mode_profile_wavelength = 800e-9; % m; the wavelength of the mode profile used to compute SR values and overlap integrals, etc.
-gas.material = 'H2';
+gas.material = {'H2'};
 gas.fiber_type = 'MWLW_coating'; % 'Ag_coating', 'no_coating', 'MWLW_coating' coating types for capillaries
 gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles for SR values and overlap integrals, etc.
 

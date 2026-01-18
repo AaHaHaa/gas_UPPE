@@ -86,9 +86,16 @@ function foutput = UPPE_propagate_constant_pressure(fiber, initial_condition, si
 %                     Whether or not to use the GPU. Using the GPU is HIGHLY recommended, as a speedup of 50-100x should be possible.
 %           include_Raman - 0(false) = ignore Raman effect
 %                           1(true)  = include gas Raman
-%           photoionization_model - 0 = ignore the photoionization effect
-%                                   1 = include the photoionization effect
-%                                   (Photoionization model is implemented currently in linearly-polarized single-mode scenarios.)
+%           include_photoionization - false = ignore the photoionization effect
+%                                     true = include the photoionization effect
+%                                     (Photoionization model is implemented currently in linearly-polarized single-mode scenarios.)
+%
+%       Scaled Fourier transform -->
+%
+%           cs.cs - scaled ratio (an integer) for narrowband transformation.
+%                   It must be a divisor of Nt.
+%           cs.model - 1 = correct nonlinear phase modulation (for nonlinear phase accumulation in CPA, Raman gain suppression, etc.)
+%                      2 = correct nonlinear amplitude modulation (for Raman gain, etc.)
 %
 %       Others -->
 %
@@ -172,7 +179,24 @@ time_window = Nt*dt;
 
 permittivity0 = 8.8541878176e-12; % F/m
 
+%% Call gas_info() to load gas parameters
+f = sim.f0+(-Nt/2:Nt/2-1)'/time_window; % THz
+c = 299792458*1e-12; % m/ps
+wavelength = c./f*1e9; % nm
+if ~gas.info_called
+    [fiber,sim,gas] = gas_info(fiber,sim,gas,wavelength);
+end
+
 %% Check the validity of input parameters
+if sim.gpu_yes
+    try
+        gpuDevice;
+    catch
+        error('UPPE_propagate_constant_pressure:GPUError',...
+              'No GPU is detected. Please set "sim.gpu_yes=false".');
+    end
+end
+
 if sim.save_period == 0
     sim.save_period = fiber.L0;
 end
@@ -188,31 +212,42 @@ end
 % Error check on the dimensions (num_modes) of matrices
 check_nummodes(sim, fiber, initial_condition.fields);
 
+num_gas = length(gas.material);
 if sim.include_Raman
-    Fmax = 1/2/dt;
+    Fmax = 1/2/(dt/sim.cs.cs);
     % Below, only the available Raman (whose preR~=0) are considered.
     % max_Omega and max_T2 are used to determine which Raman model to use (see below).
-    switch gas.material
-        case 'CH4'
-            max_Omega = max(gas.(gas.material).V.omega.*(gas.(gas.material).V.preR~=0));
-            max_T2 = max(gas.(gas.material).V.T2.*(gas.(gas.material).V.preR~=0));
-        case {'H2','N2','O2'}
-            max_Omega = max([gas.(gas.material).R.omega.*(gas.(gas.material).R.preR~=0),...
-                             gas.(gas.material).V.omega.*(gas.(gas.material).V.preR~=0)]);
-            max_T2 = max([gas.(gas.material).R.T2.*(gas.(gas.material).R.preR~=0),...
-                          gas.(gas.material).V.T2.*(gas.(gas.material).V.preR~=0)]);
-        case 'air'
-            max_Omega = max([gas.N2.R.omega.*(gas.N2.R.preR~=0),...
-                             gas.N2.V.omega.*(gas.N2.V.preR~=0),...
-                             gas.O2.R.omega.*(gas.O2.R.preR~=0),...
-                             gas.O2.V.omega.*(gas.O2.V.preR~=0)]);
-            max_T2 = max([gas.N2.R.T2.*(gas.N2.R.preR~=0),...
-                          gas.N2.V.T2.*(gas.N2.V.preR~=0),...
-                          gas.O2.R.T2.*(gas.O2.R.preR~=0),...
-                          gas.O2.V.T2.*(gas.O2.V.preR~=0)]);
-        otherwise
-            max_Omega = 0;
-            max_T2 = 0;
+    max_Omega = 0; % initialization
+    max_T2 = 0; % initialization
+    for gas_i = 1:num_gas
+        switch gas.material{gas_i}
+            case {'N2O','CO2'} % only rotational Raman
+                max_Omega_i = max(gas.(gas.material{gas_i}).R.omega.*(gas.(gas.material{gas_i}).R.preR~=0));
+                max_T2_i = max(gas.(gas.material{gas_i}).R.T2.*(gas.(gas.material{gas_i}).R.preR~=0));
+            case 'CH4' % only vibrational Raman
+                max_Omega_i = max(gas.(gas.material{gas_i}).V.omega.*(gas.(gas.material{gas_i}).V.preR~=0));
+                max_T2_i = max(gas.(gas.material{gas_i}).V.T2.*(gas.(gas.material{gas_i}).V.preR~=0));
+            case {'H2','D2','N2','O2'} % vibrational + rotational Raman
+                max_Omega_i = max([gas.(gas.material{gas_i}).R.omega.*(gas.(gas.material{gas_i}).R.preR~=0),...
+                                   gas.(gas.material{gas_i}).V.omega.*(gas.(gas.material{gas_i}).V.preR~=0)]);
+                max_T2_i = max([gas.(gas.material{gas_i}).R.T2.*(gas.(gas.material{gas_i}).R.preR~=0),...
+                                gas.(gas.material{gas_i}).V.T2.*(gas.(gas.material{gas_i}).V.preR~=0)]);
+            case 'air'
+                max_Omega_i = max([gas.N2.R.omega.*(gas.N2.R.preR~=0),...
+                                   gas.N2.V.omega.*(gas.N2.V.preR~=0),...
+                                   gas.O2.R.omega.*(gas.O2.R.preR~=0),...
+                                   gas.O2.V.omega.*(gas.O2.V.preR~=0)]);
+                max_T2_i = max([gas.N2.R.T2.*(gas.N2.R.preR~=0),...
+                                gas.N2.V.T2.*(gas.N2.V.preR~=0),...
+                                gas.O2.R.T2.*(gas.O2.R.preR~=0),...
+                                gas.O2.V.T2.*(gas.O2.V.preR~=0)]);
+            otherwise
+                max_Omega_i = 0;
+                max_T2_i = 0;
+        end
+
+        max_Omega = max(max_Omega,max_Omega_i);
+        max_T2 = max(max_T2,max_T2_i);
     end
     
     % Check the frequency window
@@ -268,30 +303,43 @@ omega = (Omega + 2*pi*sim.f0)*1e12; % Hz
 % The dispersion term in the UPPE, in frequency space
 [D_op,sim] = calc_D_op(fiber,sim,dt,Omega,initial_condition.fields);
 
-%% Create a damped frequency window to kill the peaks around the edges of the window
-sim.damped_freq_window = create_damped_freq_window(Nt);
+%% Create damped windows in time and frequency
+% Create a damped frequency window to kill the peaks around the edges of the window
+% Create a damped time window to remove fields appearing from the other side of the time window. This is activated only when "sim.pulse_centering=true."
+sim.damped_window = create_damped_window(Nt);
 
 %% Pre-calculate the factor used in UPPE (the nonlinear constant)
+% Downsampling due to the narrowband transformation
+if sim.cs.cs > 1
+    sim.mode_profiles.norms = sim.mode_profiles.norms(1:sim.cs.cs:end,:);
+    fiber.X3 = fiber.X3(1:sim.cs.cs:end);
+end
+
 prefactor = {1i*omega/4./ifftshift(sim.mode_profiles.norms(:,1),1).^4,... % I use the 1st mode for norm^4 computation.
-             ...                                                                % This can create certain amount of deviation for higher-order modes, but it should be acceptable; otherwise, the computation is too heavy.
+             ...                                                          % This can create certain amount of deviation for higher-order modes, but it should be acceptable; otherwise, the computation is too heavy.
              3*permittivity0*ifftshift(fiber.X3,1)/4}; % for Kerr term
 
+% Scaled nonlinearity due to the narrowband transformation (scaled Fourier transform)
+if sim.cs.cs > 1 && sim.cs.model == 1
+    prefactor{1} = prefactor{1}/sim.cs.cs;
+end
+
 % Photoionization prefactor
-if sim.photoionization_model
+if sim.include_photoionization
     me = 9.1093837e-31; % kg; electron mass
     e = 1.60217663e-19; % Coulomb; electron charge
     c = 299792458;
     prefactor = [prefactor,...
                  {-1i/4./ifftshift(sim.mode_profiles.norms(:,1),1).^2*e^2/me./omega,... % ionization-related loss
-                  -gas.ionization.energy/8/fiber.SR(1)*permittivity0*c./ifftshift(sim.mode_profiles.norms(:,1),1).^2}]; % ionization-related phase contribution
+                  -1/8/fiber.SR(1)*permittivity0*c./ifftshift(sim.mode_profiles.norms(:,1),1).^2}]; % ionization-related phase contribution
 end
 
 % Incorporate the damped window to the n2 term to remove generation of
 % frequency component near the window edge.
-prefactor{1} = prefactor{1}.*sim.damped_freq_window;
-if sim.photoionization_model
-    prefactor{3} = prefactor{3}.*sim.damped_freq_window;
-    prefactor{4} = prefactor{4}.*sim.damped_freq_window;
+prefactor{1} = prefactor{1}.*sim.damped_window.f;
+if sim.include_photoionization
+    prefactor{3} = prefactor{3}.*sim.damped_window.f;
+    prefactor{4} = prefactor{4}.*sim.damped_window.f;
 end
 
 if sim.gpu_yes
@@ -310,7 +358,7 @@ end
 % important to apply it to Kerr as well, especially when running
 % supercontinuum generation or when your frequency window isn't large
 % enough.
-[D_op_upsampling,prefactor,...
+[D_op_upsampling,prefactor,mode_profiles_norms,...
  upsampling_zeros] = upsampling(sim,Nt,gas_Nt,num_modes,D_op,prefactor);
 
 %% Set up some parameters for the gas Raman generation equations
@@ -336,14 +384,14 @@ save_z = double(0:save_points-1)*sim.save_period;
 %% Photoionization - erfi() lookup table
 % Because calculating erfi() is slow, it's faster if I create a lookup table and use interp1().
 % The range of input variable for erfi is 0~sqrt(2) only.
-if sim.photoionization_model ~= 0
+if sim.include_photoionization
     n_Am = 10; % the number of summation of Am term in photoionization
     gas_eqn.erfi_x = linspace(0,sqrt(2*(n_Am+1)),1000)';
     gas_eqn.erfi_y = erfi(gas_eqn.erfi_x);
 end
 
 %% Modified shot-noise for noise modeling
-At_noise = shot_noise(gas_Nt,gas_dt,sim,gas,gas_eqn,num_modes);
+At_noise = shot_noise(gas_Nt,gas_dt,sim,num_modes);
 if sim.gpu_yes
     At_noise = gpuArray(At_noise);
 end
@@ -354,14 +402,16 @@ run_start = tic;
 [A_out,...
  save_z,save_dz,...
  T_delay_out,...
- delta_permittivity,relative_Ne] = SteppingCaller_constant_pressure(fiber, sim, gas, gas_eqn,...
-                                                                    save_z, save_points,...
-                                                                    initial_condition,...
-                                                                    D_op, D_op_upsampling,...
-                                                                    SK_info, SRa_info, SRb_info,...
-                                                                    Raw, Rbw,...
-                                                                    prefactor,...
-                                                                    At_noise);
+ delta_permittivity_Raman,delta_permittivity_electronic,...
+ relative_Ne] = SteppingCaller_constant_pressure(fiber, sim, gas, gas_eqn,...
+                                                 save_z, save_points,...
+                                                 initial_condition,...
+                                                 D_op, D_op_upsampling,...
+                                                 SK_info, SRa_info, SRb_info,...
+                                                 Raw, Rbw,...
+                                                 prefactor,...
+                                                 At_noise,...
+                                                 mode_profiles_norms);
 % -------------------------------------------------------------------------
 % Just to get an accurate timing, wait before recording the time
 if sim.gpu_yes
@@ -378,10 +428,13 @@ foutput = struct('z',save_z,...
                  'betas',sim.betas,...
                  'seconds',fulltime,...
                  't_delay',T_delay_out);
-if sim.include_Raman && sim.scalar
-    foutput.delta_permittivity = delta_permittivity;
+if sim.scalar
+    foutput.delta_permittivity.electronic = delta_permittivity_electronic;
+    if sim.include_Raman
+        foutput.delta_permittivity.Raman = delta_permittivity_Raman;
+    end
 end
-if sim.photoionization_model ~= 0
+if sim.include_photoionization
     foutput.relative_Ne = relative_Ne;
 end
 

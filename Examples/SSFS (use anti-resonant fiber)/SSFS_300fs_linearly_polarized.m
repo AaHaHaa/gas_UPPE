@@ -53,12 +53,12 @@ lambda = c./f*1e9; % nm
 % parameters are required.
 gas.core_radius = 15e-6; % m
 gas.temperature = 288; % K
-gas.pressure = 15*1.01325e5; % Pa; gas pressure
+gas.pressure = 5*1.01325e5; % Pa; gas pressure
 gas.wavelength_order = 6; % The code recomputes the propagation constant to ensure that it has smooth higher-order derivatives up this order; set this to 6, currently maximum implemented value in mySpline.cu, all the time
 gas.mode_profile_wavelength = 1030e-9; % m; the wavelength of the mode profile used to compute SR values and overlap integrals, etc.
-gas.material = 'H2';
+gas.material = {'H2'};
 gas.num_tubes = 7; % the number of tubes in the anti-resonant fiber
-gas.r_tube = 12.5e-6; % m; the tube radius (not core!)
+gas.r_tube = 20e-6; % m; the tube radius (not core!)
 gas.t_tube = 300e-9; % m; the tube's wall thickness of anti-resonant fibers
 gas.fiber_type = 'AR_HC_PCF';
 gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles for SR values and overlap integrals, etc.
@@ -90,7 +90,7 @@ gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles
 [fiber,sim,gas] = gas_info(fiber,sim,gas,lambda*1e-9);
 
 %% Initial condition
-tfwhm = 0.050; % ps
+tfwhm = 0.300; % ps
 total_energy = 1e3; % nJ
 pump_wavelength = 1030e-9; % m
 freq_shift = c/pump_wavelength - sim.f0;

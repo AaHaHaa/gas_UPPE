@@ -1,5 +1,4 @@
-function [beta,SR,mode_profile] = solve_for_EH_Kagome_beta_func(wavelength,eta,sim,gas,...
-                                                                mixed_eta)
+function [beta,SR,mode_profile] = solve_for_EH_Kagome_beta_func(wavelength,eta,sim,gas)
 %   
 %   wavelength: wavelength points in simulations (m)
 %   eta: gas density (amagats)
@@ -34,14 +33,13 @@ gas_wavelength = wavelength; % m
 gas_f = c./gas_wavelength*1e-9; % THz
 
 %% Refractive index
-n_gas = find_n_gas(gas.material,gas_wavelength,eta);
-
-if isfield(gas,'mixed_material') && ~isempty(gas.mixed_material)
-    for mat_i = 1:length(gas.mixed_material) % mixed gases
-        n_gas_i = find_n_gas(gas.mixed_material{mat_i},gas_wavelength,mixed_eta);
-
-        n_gas = n_gas + n_gas_i;
-    end
+% Summation of the index, real(n), is based on (permittivity minus one)
+% The loss, however, is directly summable.
+num_gas = length(gas.material);
+n_gas = 1; % initialization
+for gas_i = 1:num_gas
+    n_gas_i = find_n_gas(gas.material{gas_i},gas_wavelength,eta(gas_i));
+    n_gas = sqrt(1 + (real(n_gas).^2-1) + (real(n_gas_i).^2-1)) + 1i*(imag(n_gas)+imag(n_gas_i));
 end
 
 %%
@@ -92,7 +90,7 @@ end
 
 s = 0.065;
 a_AP = 1.075*gas.core_radius; % area-preserving core radius
-a_c = a_AP./(1+s*gas_wavelength.^2/a_AP/gas.t_tube;
+a_c = a_AP./(1+s*gas_wavelength.^2/a_AP/gas.t_tube);
 
 % the below simplest ki removes all the loss
 ki = complex(unm./a_c);
@@ -171,7 +169,7 @@ for midx = 1:num_modes*2
 end
 norm = sqrt(sum(sum(sum(abs(mode_profiles).^2,5).*r*dr*dtheta,3),4));
 nonzero_idx = norm~=0;
-mode_profiles(nonzero_idx) = mode_profiles(nonzero_idx)./norm(nonzero_idx);
+mode_profiles(1,nonzero_idx,:,:,:) = mode_profiles(1,nonzero_idx,:,:,:)./norm(1,nonzero_idx,:,:,:);
 
 % Transform into (x,y) basis
 if sim.gpu_yes

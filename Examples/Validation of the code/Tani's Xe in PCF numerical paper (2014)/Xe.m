@@ -50,10 +50,10 @@ lambda = c./f*1e9; % nm
 % parameters are required.
 gas.core_radius = 9e-6; % m
 gas.temperature = 288.15; % K
-gas.pressure = 25*1.013e5; % Pa; gas pressure
+gas.pressure = [25*1.013e5]; %#ok Pa; gas pressure
 gas.wavelength_order = 6; % The code recomputes the propagation constant to ensure that it has smooth higher-order derivatives up this order; set this to 6, currently maximum implemented value in mySpline.cu, all the time
 gas.mode_profile_wavelength = 800e-9; % m; the wavelength of the mode profile used to compute SR values and overlap integrals, etc.
-gas.material = 'Xe';
+gas.material = {'Xe'};
 gas.fiber_type = 'no_coating'; % 'Ag_coating', 'no_coating', 'MWLW_coating' coating types for capillaries
 gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles for SR values and overlap integrals, etc.
 

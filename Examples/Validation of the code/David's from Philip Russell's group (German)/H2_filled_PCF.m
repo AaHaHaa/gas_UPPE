@@ -49,11 +49,14 @@ lambda = c./f*1e9; % nm
 % parameters are required.
 gas.core_radius = 15e-6; % m
 gas.temperature = 288; % K
-gas.pressure = 10*1.013e5; % Pa
+gas.pressure = [10*1.013e5]; %#ok Pa
 gas.wavelength_order = 6;
 gas.mode_profile_wavelength = 1030e-9; % m
-gas.material = 'H2';
-gas.fiber_type = 'no_coating';
+gas.material = {'H2'};
+gas.fiber_type = 'AR_HC_PCF';
+gas.num_tubes = 7; % the number of tubes in the anti-resonant fiber
+gas.r_tube = 20e-6; % m; the tube radius (not core!)
+gas.t_tube = 323e-9; % m; the tube's wall thickness of anti-resonant fibers
 gas.xy_sampling = 101;
 
 % Load hollow-core fiber parameters based on the configured parameters
@@ -82,7 +85,7 @@ gas.xy_sampling = 101;
 %    gas.H2.V.preR - H2's prefactors, representing Raman strength, of vibrational Raman scattering
 [fiber,sim,gas] = gas_info(fiber,sim,gas,lambda*1e-9);
 
-fiber.betas = real(fiber.betas); % ignore the loss for replication
+%fiber.betas = real(fiber.betas); % ignore the loss for replication
 
 %% Initial condition
 tfwhm1 = 1; % ps

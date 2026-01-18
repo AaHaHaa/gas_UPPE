@@ -60,7 +60,7 @@ gas.temperature = 273.15 + 25; % K
 gas.pressure = 10*1e5; % Pa; gas pressure
 gas.wavelength_order = 6; % The code recomputes the propagation constant to ensure that it has smooth higher-order derivatives up this order; set this to 6, currently maximum implemented value in mySpline.cu, all the time
 gas.mode_profile_wavelength = 1025e-9; % m; the wavelength of the mode profile used to compute SR values and overlap integrals, etc.
-gas.material = 'N2';
+gas.material = {'N2'};
 gas.fiber_type = 'MWLW_coating'; % 'Ag_coating', 'no_coating', 'MWLW_coating' coating types for capillaries
 gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles for SR values and overlap integrals, etc.
 
@@ -133,7 +133,7 @@ log_yes = false; % Use "log_yes = true" to see, under log scale, how spectral in
 save_point = size(prop_output.fields,3);
 Frame(save_point) = struct('cdata',[],'colormap',[]);
 for i = 1:save_point
-    [~,~,~,figs,ax] = calc_spectrogram(t,f,prop_output.fields(:,1,i),[-0.5,0.8],[600,2000],400,400,true,true,log_yes);
+    [~,~,~,figs,ax] = calc_spectrogram(t,f,prop_output.fields(:,1,i),true,[-0.5,0.8],[600,2000],400,400,true,true,log_yes);
     set(figs,'Color',[1,1,1]);
 
     Frame(i) = getframe(figs);

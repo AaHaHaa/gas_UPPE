@@ -15,13 +15,13 @@ addpath('helper functions','../Gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-material = 'N2';
+material = {'H2'};
 
-pressure = 0; % atm
-temperature = 288.15; % 15 degree Celsius
+pressure = [40];; %#ok atm
+temperature = 273.15 + 25; % 25 degree Celsius
 core_radius = 15e-6; % core radius; m
 
-t_tube = 100e-9; % m; revolver-wall thickness
+t_tube = 236.7e-9; % m; revolver-wall thickness
 
 % Empirical model by Vincetti:
 % 1. Vincetti et al., "Empirical formulas for calculating loss in hollow
@@ -29,13 +29,13 @@ t_tube = 100e-9; % m; revolver-wall thickness
 % 2. Vincetti et al., "A simple analytical model for confinement loss
 %    estimation in hollow-core Tube Lattice Fibers," Opt. Express 27(4),
 %    5230-5237 (2019)
-num_tubes = 8;
-r_tube = 12.5e-6; % m
+num_tubes = 7;
+r_tube = 20e-6; % m
 delta_tube = abs(((core_radius/r_tube + 1)*sin(pi/num_tubes) - 1)*(2*r_tube));
 
 % Wavelength sampling for the propagation constant and the loss
 num_wavelength = 1e5;
-wavelength_range = [300,2e3]; % nm
+wavelength_range = [300,5e3]; % nm
 c = 299792.458; % nm/ps
 f = linspace(c/wavelength_range(1),c/wavelength_range(2),num_wavelength)'; % THz
 wavelength = c./f; % nm
@@ -51,22 +51,34 @@ user_midx = 1;%[1,4,9,17,28,40];
 num_modes = length(user_midx);
 
 % refractive index
-pressure = pressure*1.01325e5; % Pa
+pressure = pressure*1e5; % Pa
 pressure0 = 1.01325e5; % Pa
 temperature0 = 273.15; % 0 degree Celsius
 eta = (pressure/temperature)/(pressure0/temperature0); % gas density (in amagat)
-[n_gas,imag_k_gas] = find_n_gas(material,wavelength*1e-9,eta);
-n_gas = real(n_gas);
+% Summation of the index, real(n), is based on permittivity
+% The loss, however, is directly summable.
+num_gas = length(material);
+n_gas = 1; % initialization
+imag_k_gas = 0; % initialization
+for gas_i = 1:num_gas
+    [n_gas_i,imag_k_gas_i] = find_n_gas(material{gas_i},wavelength*1e-9,eta(gas_i));
+    n_gas_i = real(n_gas_i);
+
+    n_gas = sqrt(1 + (n_gas.^2-1) + (n_gas_i.^2-1));
+    imag_k_gas = imag_k_gas + imag_k_gas_i;
+end
 
 cuda_dir_path = '../cuda';
 diff_order = 6;
 n_silica = calc_n_silica(wavelength,use_gpu,cuda_dir_path,diff_order);
 
-if abs(round(pressure/1.01325e5)-pressure/1.01325e5) < eps(1) % pressure is an integer number of atm
-    saved_filename = sprintf('info_AR_HC_PCF_%s_%dum_%datm_%dnm.mat',material,core_radius*2*1e6,pressure/1.01325e5,t_tube*1e9);
+material_name = sprintf('%s',material{:});
+if all(abs(round(pressure/1e5)-pressure/1e5) < eps(1)) % pressure is an integer number of atm
+    pressure_name = sprintf('%d',pressure/1e5);
 else
-    saved_filename = sprintf('info_AR_HC_PCF_%s_%dum_%.1fatm_%dnm.mat',material,core_radius*2*1e6,pressure/1.01325e5,t_tube*1e9);
+    pressure_name = sprintf('%.1f',pressure/1e5);
 end
+saved_filename = sprintf('info_AR_HC_PCF_%s_%dum_%sbar_%dnm.mat',material_name,core_radius*2*1e6,pressure_name,round(t_tube*1e9));
 
 %%
 % the mode index
@@ -141,7 +153,8 @@ end
 % Vincetti's empirical model considers only the fundamental mode, so I
 % resort to poor-man's model to find the loss for higher-order modes.
 alpha_empirical = loss_AR_HC_PCF(wavelength,...
-                                 num_tubes,r_tube,t_tube,delta_tube);
+                                 num_tubes,r_tube,t_tube,delta_tube,...
+                                 use_gpu,cuda_dir_path);
 
 sd = 2e-7; % scaling coefficient
 Fd = sd*wavelength.^3./a_c.^4; % the power fraction of light residing in the dielectric

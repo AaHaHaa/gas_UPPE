@@ -27,8 +27,21 @@ function [ne,DneDt] = photoionization_PPT_model(A_t, inverse_Aeff, ionization_en
 if num_modes ~= 1 || ellipticity ~= 0
     error('Photoionization model works only for linearly polarized single mode.');
 end
-if isempty(l) || l>1 % l is implemented with 0 or 1 for now
+if isempty(l) || ~ismember(l,[0,1]) % l is implemented with 0 or 1 for now
     error('Current material isn''t supported yet.');
+end
+
+% Center the pulse's peak to the time window
+% In this package, the field can be centered according to its RMS time
+% center; however, if a pulse has a long pedestal, the peak can be shifted
+% to the edge of the time window, leading to wrong photoionization
+% computation of this code.
+[~,max_idx] = max(abs(A_t));
+shift_idx = max_idx - (floor(Nt/2)+1);
+if shift_idx > 0
+    A_t = [A_t(1+shift_idx:end,:);A_t(1:shift_idx,:)];
+elseif shift_idx < 0
+    A_t = [A_t(end+1+shift_idx:end,:);A_t(1:end+shift_idx,:)];
 end
 
 % Find instantaneous frequency of the pulse
@@ -82,16 +95,35 @@ end
 Cnl2 = 2^(2*nstar)/nstar/gamma(nstar+lstar+1)/gamma(nstar-lstar);
 W = zeros(size(I)); % initialize W for the latter summation of the overall ionization rate including m = -l to l
 for m = -l:l % l is implemented with 0 or 1 for now
-    flm = (2*lstar+1)*gamma(lstar+abs(m)+1)/2^(abs(m))/factorial(abs(m))/gamma(lstar-abs(m)+1);
+    flm = (2*l+1)*gamma(l+abs(m)+1)/2^(abs(m))/factorial(abs(m))/gamma(l-abs(m)+1);
     W = W + Cnl2*flm*ionization_energy/hbar*sqrt(6/pi)*A{abs(m)+1}.*(sqrt(permittivity0*c/2./I)*kappa./sqrt(1+Keldysh_parameter.^2)).^(2*nstar-abs(m)-1.5).*exp(-sqrt(permittivity0*c/2./I)*kappa/3.*g);
 end
 W(I<max(I)/1e4) = 0; % avoid non-negligible W when there is no or weak field due to numerical precision error
 
-ne = Ng*cumsum(W)*(dt*1e-12);
+P = cumsum((-W)*(dt*1e-12),1);
+ne = exp(P).*cumsum(W*Ng.*exp(-P),1)*(dt*1e-12);
+if max(ne(:))/Ng > 0.3
+    error('photoionization_PPT_model:neError',...
+          ['Ion density is too high, reaching %.3f%% of total gas density.\n',...
+           'Current implementation supports only perturbative ionization,\n',...
+           'so such a high density means that the model is failing and the result is wrong.\n',...
+           '(1) Please reduce the peak power or anything that reduces the ionization effect to maintain in the perturbative regime.\n',...
+           '(2) Another possible reason is that there are multiple pulses that get too close to the edge of time window, which can cause artificial errors. Please increase the time window.'],max(ne(:))/Ng*100);
+end
 % Below is the more accurate version with integrating factor.
 % It's important only when relative_ne approaches the gas number density, Ng.
 %integrating_factor = exp(cumsum(W)*(dt*1e-12));
 %ne = Ng./integrating_factor.*cumsum(W.*integrating_factor)*(dt*1e-12);
 DneDt = W.*(Ng - ne);
+
+% Recover the previous temporal shifting
+shift_idx = -shift_idx;
+if shift_idx > 0
+    ne = [ne(1+shift_idx:end);ne(1:shift_idx)];
+    DneDt = [DneDt(1+shift_idx:end);DneDt(1:shift_idx)];
+elseif shift_idx < 0
+    ne = [ne(end+1+shift_idx:end);ne(1:end+shift_idx)];
+    DneDt = [DneDt(end+1+shift_idx:end);DneDt(1:end+shift_idx)];
+end
 
 end

@@ -112,9 +112,16 @@ function [fiber,sim] = load_default_UPPE_propagate( input_fiber,input_sim )
 %                     Whether or not to use the GPU. Using the GPU is HIGHLY recommended, as a speedup of 50-100x should be possible.
 %           include_Raman - 0(false) = ignore Raman effect
 %                           1(true)  = include gas Raman
-%           photoionization_model - 0 = ignore the photoionization effect
-%                                   1 = include the photoionization effect
-%                                   (Photoionization model is implemented currently in single-mode scenarios.)
+%           include_photoionization - false = ignore the photoionization effect
+%                                     true = include the photoionization effect
+%                                     (Photoionization model is implemented currently in single-mode scenarios.)
+%
+%       Scaled Fourier transform -->
+%
+%           cs.cs - scaled ratio (an integer) for narrowband transformation.
+%                   It must be a divisor of Nt.
+%           cs.model - 1 = correct nonlinear phase modulation (for nonlinear phase accumulation in CPA, Raman gain suppression, etc.)
+%                      2 = correct nonlinear amplitude modulation (for Raman gain, etc.)
 %
 %       Others -->
 %
@@ -227,7 +234,12 @@ default_sim.gpu_yes = true;
 default_sim.include_Raman = true; % consider Raman
 default_sim.parallel_yes = false;
 default_sim.parallel_idx = 1;
-default_sim.photoionization_model = 0;
+default_sim.include_photoionization = false;
+default_sim.include_heating = false;
+
+% Narrowband transformation (scaled Fourier transform)
+default_sim.cs.cs = 1; % scaled factor
+default_sim.cs.model = 2; % correct nonlinear amplitude modulation
 
 % Others
 default_sim.pulse_centering = true; % center the pulse according to the time window

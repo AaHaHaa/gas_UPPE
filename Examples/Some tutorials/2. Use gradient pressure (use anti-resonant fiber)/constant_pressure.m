@@ -58,10 +58,10 @@ gas.temperature = 300; % K
 gas.pressure = 10*1.01325e5; % Pa; gas pressure
 gas.wavelength_order = 6; % The code recomputes the propagation constant to ensure that it has smooth higher-order derivatives up this order; set this to 6, currently maximum implemented value in mySpline.cu, all the time
 gas.mode_profile_wavelength = 532e-9; % m; the wavelength of the mode profile used to compute SR values and overlap integrals, etc.
-gas.material = 'He';
+gas.material = {'He'};
 gas.fiber_type = 'AR_HC_PCF';
 gas.num_tubes = 7; % the number of tubes in the anti-resonant fiber
-gas.r_tube = 12.5e-6; % m; the tube radius (not core!)
+gas.r_tube = 20e-6; % m; the tube radius (not core!)
 gas.t_tube = 215e-9; % m; the tube's wall thickness of anti-resonant fibers
 gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles for SR values and overlap integrals, etc.
 

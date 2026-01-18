@@ -1,6 +1,6 @@
 clearvars; close all;
 
-addpath('../../../user_helpers/');
+addpath('../../user_helpers/');
 
 load('DW.mat');
 

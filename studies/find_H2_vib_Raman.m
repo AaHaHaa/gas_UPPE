@@ -7,8 +7,6 @@
 
 clearvars; close all;
 
-Aeff = pi*(150e-6)^2; % Just assume some effective area; not really important
-
 eta = 20; % gas density in amagat 
 gas.temperature = 273.15 + 25; % K
 gas.pressure = eta*1.01325e5; % Pa

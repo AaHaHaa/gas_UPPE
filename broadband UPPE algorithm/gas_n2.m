@@ -1,4 +1,4 @@
-function n2 = gas_n2(material,wavelength)
+function n2 = gas_n2(material,wavelength,eta)
 %GAS_N2 Load gas's n2 value
 
 % Most values come from
@@ -23,72 +23,89 @@ function n2 = gas_n2(material,wavelength)
 %    "Generation of 0.1-TW 5-fs optical pulses at a 1-kHz repetition rate," Opt. Lett. 22(20), 1562-1564 (1997)
 % 2. Suda et al.,
 %    "Generation of sub-10-fs, 5-mJ-optical pulses using a hollow fiber with a pressure gradient," Appl. Phys. Lett. 86, 111116 (2005)
-switch material
-    case 'H2' % m^2/(W*atm)
-              % This value is taken from Wahlstrand, et al., 
-              % "Absolute measurement of the ultrafast nonlinear electronic and rovibrational response in H2 and D2" (2015)
-              % Its value, after converted into X3, is close to the paper by Belli et al.,
-              % "Vacuum-ultraviolet to infrared supercontinuum in hydrogen-filled photonic crystal fiber" Optica (2015)
-              % with X3 = 2.206e-26 m^2/V^2 at standard conditions
-        n2 = 0.65e-23;
-    case 'N2' % m^2/(W*atm)
-              % From Jeffrey M. Brown et al.,
-              % "Ab initio calculations of the linear and nonlinear susceptibilities of N2, O2, and air in midinfrared laser pulses"
-        P_n2 = 14.63e9; % W
-        lambda0_n2 = 0.3334e-6; % m
-        n2 = P_n2^(-1)./(lambda0_n2^(-2) - wavelength.^(-2));
-        n2(wavelength < 400e-9) = P_n2^(-1)./(lambda0_n2^(-2) - (400e-9).^(-2)); % this equation is valid only above 400 nm
-        n2(isinf(n2)) = 0; % avoid the singularity at lambda0_n2
-    case 'O2' % m^2/(W*atm)
-              % From Jeffrey M. Brown et al.,
-              % "Ab initio calculations of the linear and nonlinear susceptibilities of N2, O2, and air in midinfrared laser pulses"
-        P_n2 = 14.62e9; % W
-        lambda0_n2 = 0.3360e-6; % m
-        n2 = P_n2^(-1)./(lambda0_n2^(-2) - wavelength.^(-2));
-        n2(wavelength < 400e-9) = P_n2^(-1)./(lambda0_n2^(-2) - (400e-9).^(-2)); % this equation is valid only above 400 nm
-        n2(isinf(n2)) = 0; % avoid the singularity at lambda0_n2
-    case 'air' % Calculate n2 for N2 and O2
-               % Add them up with 79% N2 and 21% O2
-        P_n2 = 14.63e9; % W
-        lambda0_n2 = 0.3334e-6; % m
-        n2_N2 = P_n2^(-1)./(lambda0_n2^(-2) - wavelength.^(-2));
-        n2_N2(wavelength < 400e-9) = P_n2^(-1)./(lambda0_n2^(-2) - (400e-9).^(-2)); % this equation is valid only above 400 nm
-        P_n2 = 14.62e9; % W
-        lambda0_n2 = 0.3360e-6; % m
-        n2_O2 = P_n2^(-1)./(lambda0_n2^(-2) - wavelength.^(-2));
-        n2_O2(wavelength < 400e-9) = P_n2^(-1)./(lambda0_n2^(-2) - (400e-9).^(-2)); % this equation is valid only above 400 nm
-        n2 = 0.79*n2_N2 + 0.21*n2_O2; %clear n2_N2 n2_O2
-        n2(isinf(n2)) = 0; % avoid the singularity
-    case 'Xe' % m^2/(W*atm)
-              % From Shu-Zee Alencious Lo, et al.,
-              % "Pulse propagation in hollow-core fiber at high-pressure regime: application to compression of tens of ?J pulses and determination of nonlinear refractive index of xenon at 1.03um" Applied Optics (2018)
-        n2 = 50.1e-24;
-    case 'Ar' % m^2/(W*atm)
-              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
-              % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
-        n2 = 7.96e-24;
-    case 'Ne' % m^2/(W*atm)
-              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
-              % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
-        n2 = 0.85e-24;
-    case 'He' % m^2/(W*atm)
-              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
-              % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
-        n2 = 0.34e-24;
-    case 'Kr' % m^2/(W*atm)
-              % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
-              % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
-        n2 = 18.9e-24;
-    case 'CH4'
-        n2 = 3.118e-23; % m^2/(W*atm)
-    case 'N2O' % m^2/(W*atm)
-               % From Dempsey, et al.,
-               % "Comparative study of optical nonlinearities of CO2 and N2O via single-shot spatio-temporally-resolved visualization" (2023)
-        n2 = 21e-24;
-    case 'CO2' % m^2/(W*atm)
-               % From Dempsey, et al.,
-               % "Comparative study of optical nonlinearities of CO2 and N2O via single-shot spatio-temporally-resolved visualization" (2023)
-        n2 = 13e-24;
+num_gas = length(material);
+n2 = 0; % initialization
+for gas_i = 1:num_gas
+    switch material{gas_i}
+        case 'H2' % m^2/(W*atm)
+                  % This value is taken from Wahlstrand, et al., 
+                  % "Absolute measurement of the ultrafast nonlinear electronic and rovibrational response in H2 and D2" (2015)
+                  % Its value, after converted into X3, is close to the paper by Belli et al.,
+                  % "Vacuum-ultraviolet to infrared supercontinuum in hydrogen-filled photonic crystal fiber" Optica (2015)
+                  % with X3 = 2.206e-26 m^2/V^2 at standard conditions
+            n2_i = 0.65e-23;
+        case 'D2' % m^2/(W*atm)
+                  % This value is taken from Wahlstrand, et al., 
+                  % "Absolute measurement of the ultrafast nonlinear electronic and rovibrational response in H2 and D2" (2015)
+            n2_i = 0.58e-23;
+        case 'N2' % m^2/(W*atm)
+                  % From Jeffrey M. Brown et al.,
+                  % "Ab initio calculations of the linear and nonlinear susceptibilities of N2, O2, and air in midinfrared laser pulses"
+            P_n2 = 14.63e9; % W
+            lambda0_n2 = 0.3334e-6; % m
+            n2_i = P_n2^(-1)./(lambda0_n2^(-2) - wavelength.^(-2));
+            n2_i(wavelength < 400e-9) = P_n2^(-1)./(lambda0_n2^(-2) - (400e-9).^(-2)); % this equation is valid only above 400 nm
+            n2_i(isinf(n2_i)) = 0; % avoid the singularity at lambda0_n2
+        case 'O2' % m^2/(W*atm)
+                  % From Jeffrey M. Brown et al.,
+                  % "Ab initio calculations of the linear and nonlinear susceptibilities of N2, O2, and air in midinfrared laser pulses"
+            P_n2 = 14.62e9; % W
+            lambda0_n2 = 0.3360e-6; % m
+            n2_i = P_n2^(-1)./(lambda0_n2^(-2) - wavelength.^(-2));
+            n2_i(wavelength < 400e-9) = P_n2^(-1)./(lambda0_n2^(-2) - (400e-9).^(-2)); % this equation is valid only above 400 nm
+            n2_i(isinf(n2_i)) = 0; % avoid the singularity at lambda0_n2
+        case 'air' % Calculate n2 for N2 and O2
+                   % Add them up with 79% N2 and 21% O2
+            P_n2 = 14.63e9; % W
+            lambda0_n2 = 0.3334e-6; % m
+            n2_N2 = P_n2^(-1)./(lambda0_n2^(-2) - wavelength.^(-2));
+            n2_N2(wavelength < 400e-9) = P_n2^(-1)./(lambda0_n2^(-2) - (400e-9).^(-2)); % this equation is valid only above 400 nm
+            P_n2 = 14.62e9; % W
+            lambda0_n2 = 0.3360e-6; % m
+            n2_O2 = P_n2^(-1)./(lambda0_n2^(-2) - wavelength.^(-2));
+            n2_O2(wavelength < 400e-9) = P_n2^(-1)./(lambda0_n2^(-2) - (400e-9).^(-2)); % this equation is valid only above 400 nm
+            n2_i = 0.79*n2_N2 + 0.21*n2_O2; %clear n2_N2 n2_O2
+            n2_i(isinf(n2_i)) = 0; % avoid the singularity
+        case 'Xe' % m^2/(W*atm)
+                  % From Shu-Zee Alencious Lo, et al.,
+                  % "Pulse propagation in hollow-core fiber at high-pressure regime: application to compression of tens of ?J pulses and determination of nonlinear refractive index of xenon at 1.03um" Applied Optics (2018)
+            n2_i = 50.1e-24;
+        case 'Ar' % m^2/(W*atm)
+                  % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
+                  % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
+            n2_i = 7.96e-24;
+        case 'Ne' % m^2/(W*atm)
+                  % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
+                  % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
+            n2_i = 0.85e-24;
+        case 'He' % m^2/(W*atm)
+                  % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
+                  % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
+            n2_i = 0.34e-24;
+        case 'Kr' % m^2/(W*atm)
+                  % From Carsten Bree, Ayhan Demircan, and Gunter Steinmeyer,
+                  % "Method for Computing the Nonlinear Refractive Index via Keldysh Theory" (2010)
+            n2_i = 18.9e-24;
+        case 'CH4' % From Shaw et al.,
+                   % "Measurement of the nonlinear refractive index of air and other gases at 248 nm," Opt. Commun. 103(1), 153-160 (1993)
+                   %
+                   % The above paper contains only the total n2, which includes both electronic and Raman contributions. So I need to exclude it myself.
+                   % I use Ar's 0.24 to find the actual value from CH4's 0.94.
+                   % Ar n2 is 7.96e-24, so CH4's total n2 is 7.94e-24*0.94/0.24=3.118e-23.
+                   % After calibrating the Raman nonlinearity with other prior works, we find the (incorrect) Raman fraction to be 0.0760.
+                   % As Raman nonlinearity is included twice, the correct one is thus 0.0760/(1-0.0760)=0.0822.
+                   % Accordingly, the electronic nonlinearity is 3.118e-23*(1-0.0760*2)/(1-0.0760)=2.862e-23.
+            n2_i = 2.862e-23; % m^2/(W*atm)
+        case 'N2O' % m^2/(W*atm)
+                   % From Dempsey, et al.,
+                   % "Comparative study of optical nonlinearities of CO2 and N2O via single-shot spatio-temporally-resolved visualization" (2023)
+            n2_i = 21e-24;
+        case 'CO2' % m^2/(W*atm)
+                   % From Dempsey, et al.,
+                   % "Comparative study of optical nonlinearities of CO2 and N2O via single-shot spatio-temporally-resolved visualization" (2023)
+            n2_i = 13e-24;
+    end
+    n2 = n2 + n2_i*eta(gas_i);
 end
 
 end

@@ -6,19 +6,19 @@ clearvars; close all;
 num_disp_orders = 3;
 use_gpu = false;%true;
 
-load('info_MWLW_coating_Ar_300um_25atm.mat','beta','wavelength');
+load('info_AR_HC_PCF_N2Ar_30um_400bar_237nm.mat','beta','wavelength');
 
 c = 2.99792458e-4; % speed of ligth; m/ps
 
 Nf = size(beta,1);
 num_modes = size(beta,2);
 
-wavelength_min = 0.3; % um
-wavelength_max = 2; % um
+wavelength_min = 0.4; % um
+wavelength_max = 3; % um
 
 % Show the Stokes,pump,anti-Stokes phase matching condition 
-wavelength_pump = 1.03; % um
-FWM_Shift = 87.449;
+wavelength_pump = 0.607; % um
+FWM_Shift = 69.8;
 
 %% Calculate the propagation constants
 wavelength = wavelength*1e6; % um
@@ -70,3 +70,5 @@ set(gca,'fontsize',20);
 xlabel('Frequency (THz)');
 %legend('\beta_0','Vib Raman');
 ylabel('\beta (1/mm)');
+
+disp(2*beta_pump-beta_seed-beta_idler);

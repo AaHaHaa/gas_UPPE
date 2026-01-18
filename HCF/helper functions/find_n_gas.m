@@ -22,7 +22,7 @@ function [n_gas,Raman_absorption] = find_n_gas(material,wavelength,eta)
 [a,b] = Sellmeier_coefficients(material); % Sellmeier coefficients
 Sellmeier_terms = @(lambda,a,b) a.*lambda.^2./(lambda.^2 - b.^2);
 switch material
-    case 'H2'
+    case {'H2','D2'}
         %n_gas = calc_n_H2(wavelength*1e9,sim.cuda_dir_path,gas.wavelength_order);
         n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
         
@@ -49,7 +49,7 @@ switch material
         % pressure-induced absorption
         Raman_absorption = read_absorption(material,wavelength,eta); % imag_k_gas
         n_gas = n_gas + 1i*Raman_absorption./(2*pi./wavelength);
-    case {'air','N2','N2O'}
+    case {'air','N2'}
         n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
         
         permittivity_r = n_from_Sellmeier(wavelength*1e6).^2;
@@ -58,7 +58,7 @@ switch material
         % pressure-induced absorption
         Raman_absorption = read_absorption(material,wavelength,eta); % imag_k_gas
         n_gas = n_gas + 1i*Raman_absorption./(2*pi./wavelength);
-    case {'Ar','CO2'}
+    case {'Ar','N2O','CO2'}
         n_from_Sellmeier = @(lambda) sum(Sellmeier_terms(lambda,a,b),2) + 1;
         
         permittivity_r = n_from_Sellmeier(wavelength*1e6).^2;

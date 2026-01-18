@@ -3,11 +3,11 @@ function target_n = calc_n_silica(wavelength,use_gpu,varargin)
 %   wavelength: (nm)
 
 %% Default optional input arguments
-% Accept only 4 optional inputs at most
+% Accept only 2 optional inputs at most
 numvarargs = length(varargin);
-if numvarargs > 4
+if numvarargs > 2
     error('calc_n_silica:TooManyInputs', ...
-          'It takes only at most 4 optional inputs');
+          'It takes only at most 2 optional inputs');
 end
 
 % Set defaults for optional inputs
@@ -77,27 +77,32 @@ end
 % This might be ignorable.
 % Just some random smoothing of the refractive index.
 
-if use_gpu
-    %target_n = gather(target_n);
-    wavelength = gpuArray(wavelength);
-end
-for i = 1:3
-    [Dn,Dk] = smooth_nk(use_gpu,cuda_dir_path,wavelength(2:end)*1e-3,diff(real(target_n))./diff(wavelength),diff(imag(target_n))./diff(wavelength),max(ceil(length(wavelength)/2000),3),1);
-    target_n = cumtrapz(wavelength,[0;Dn+1i*Dk]) + target_n(1);
-end
-for i = 1:5
-    real_n = smooth(real(target_n),ceil(length(wavelength)/1000));
-    imag_n = smooth(imag(target_n),ceil(length(wavelength)/1000));
-    target_n = real_n + 1i*imag_n;
+% This smoothing takes too much computational time, so it's applied only
+% when there are not a lot of sampling points.
+if size(wavelength,1) < 2^17
+    if use_gpu
+        %target_n = gather(target_n);
+        wavelength = gpuArray(wavelength);
+    end
+    for i = 1:3
+        [Dn,Dk] = smooth_nk(use_gpu,cuda_dir_path,wavelength(2:end)*1e-3,diff(real(target_n))./diff(wavelength),diff(imag(target_n))./diff(wavelength),max(ceil(length(wavelength)/2000),3),1);
+        target_n = cumtrapz(wavelength,[0;Dn+1i*Dk]) + target_n(1);
+    end
+    for i = 1:5
+        real_n = smooth(real(target_n),ceil(length(wavelength)/1000));
+        imag_n = smooth(imag(target_n),ceil(length(wavelength)/1000));
+        target_n = real_n + 1i*imag_n;
+    end
+    
+    smooth_wl = wavelength*1e-3 > 2 & wavelength*1e-3 < 6;
+    for i = 1:5
+        real_n(smooth_wl) = smooth(real(target_n(smooth_wl)),ceil(length(wavelength)/1000));
+        imag_n(smooth_wl) = smooth(imag(target_n(smooth_wl)),ceil(length(wavelength)/1000));
+        target_n = real_n + 1i*imag_n;
+    end
 end
 
-smooth_wl = wavelength*1e-3 > 2 & wavelength*1e-3 < 6;
-for i = 1:5
-    real_n(smooth_wl) = smooth(real(target_n(smooth_wl)),ceil(length(wavelength)/1000));
-    imag_n(smooth_wl) = smooth(imag(target_n(smooth_wl)),ceil(length(wavelength)/1000));
-    target_n = real_n + 1i*imag_n;
-end
-
+%% Prepare for output
 idx = imag(target_n)<0;
 target_n(idx) = real(target_n(idx)); % loss can't be negative
 

@@ -1,5 +1,6 @@
 function confinement_loss = loss_AR_HC_PCF(wavelength,...
-                                           num_tubes,r_tube,t_tube,delta_tube)
+                                           num_tubes,r_tube,t_tube,delta_tube,...
+                                           use_gpu,cuda_dir_path)
 %LOSS_AR_HC_PCF Summary of this function goes here
 %   
 % References:
@@ -12,11 +13,12 @@ function confinement_loss = loss_AR_HC_PCF(wavelength,...
 k = 1 + delta_tube/(2*r_tube);
 r_core = (k/sin(pi/num_tubes) - 1)*r_tube;
 
-n_silica = calc_n_silica(wavelength*1e9,false);
+n_silica = calc_n_silica(wavelength*1e9,use_gpu,cuda_dir_path,0);
 n_silica = real(n_silica);
+n_silica(n_silica < 1.1) = 1.1;
 
 normalized_confinement_loss = 3e-4; % dB; from [2], but [1] employs 5e-4.
-min_confinement_loss = real(normalized_confinement_loss/(r_core/r_tube)^4*(wavelength/r_tube).^4.5/(1 - t_tube/r_tube)^12.*sqrt(n_silica.^2-1)/t_tube.*exp(2*wavelength/r_tube./(real(n_silica).^2-1))); % dB/m
+min_confinement_loss = real(normalized_confinement_loss/(r_core/r_tube)^4*(wavelength/r_tube).^4.5/(1 - t_tube/r_tube)^12.*sqrt(n_silica.^2-1)/t_tube.*exp(2*wavelength/r_tube./(n_silica.^2-1))); % dB/m
 
 normf = 2*t_tube./wavelength.*sqrt(n_silica.^2 - 1);
 

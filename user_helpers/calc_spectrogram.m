@@ -20,6 +20,7 @@ function varargout = calc_spectrogram(t,f,field,varargin)
 %
 %   Optional input arguments (ordered as below):
 %
+%       ignore_temporal_interference - true or false (default: false)
 %       tlim - (1,2) matrix; the range of the time to plot (ps) (default: [])
 %       wavelengthlim - (1,2) matrix; the range of the wavelength to plot (nm) (default: [])
 %       t_feature - a scalar; the ratio of the tiny pulse structure vs. pulse duration you want to resolve;
@@ -80,19 +81,19 @@ function varargout = calc_spectrogram(t,f,field,varargin)
 %% Input arguments
 numvarargin = nargin - 3;
 % Set defaults for optional inputs
-optargs = {[],[],50,50,true,true,false};
+optargs = {false,[],[],50,50,true,true,false,[]};
 % Now put these defaults into the valuesToUse cell array, 
 % and overwrite the ones specified in varargin.
 optargs(1:numvarargin) = varargin;
 % Place optional args in memorable variable names
-[tlim,wavelengthlim,t_feature,f_feature,plot_yes,lambda_or_f,log_yes] = optargs{:};
-if nargin < 3 || nargin > 10
+[ignore_temporal_interference,tlim,wavelengthlim,t_feature,f_feature,plot_yes,lambda_or_f,log_yes] = optargs{:};
+if nargin < 3 || nargin > 11
     error('analyze_sim:InputArgumentsError',...
-          'The number of input arguments doesn''t match the requirements. The minimum of 3 inputs are required.');
+          'The number of input arguments doesn''t match the requirements.\nA minimum of 3 and a maximum of 11 inputs are required.');
 end
 
 %% find the pulse
-[t,f,field] = expand_with_zeros(t,f,field);
+[t,f,field] = expand_Twindow_with_zeros(t,f,field);
 [t,f,field] = useful_part(t,f,field);
 
 %% Some calculations
@@ -103,8 +104,8 @@ dt = t(2)-t(1); % ps
 factor_correct_unit = (N*dt)^2/1e3; % to make the spectrum of the correct unit "nJ/THz"
                                     % "/1e3" is to make pJ into nJ
 factor = c./wavelength.^2; % change the spectrum from frequency domain into wavelength domain
-spectrum_f = abs(fftshift(ifft(field),1)).^2*factor_correct_unit;
-spectrum_lambda = spectrum_f.*factor;
+spectrum_f = abs(fftshift(ifft(field,[],1),1)).^2*factor_correct_unit; % PSD in frequency
+spectrum_lambda = spectrum_f.*factor; % PSD in wavelength
 intensity = abs(field).^2;
 
 %{
@@ -159,19 +160,45 @@ min_sp = min(spectrum);
 spectrum = (spectrum-min_sp)./(max_sp-min_sp);
 
 %% spectrogram information: window size, nfft, noverlap, Fs
+% -------------------------------------------------------------------------
 % Automatically determine the size of the sliding window of the stft
-f_stft = (-floor(N/2):ceil(N/2)-1)/N';
-tmp = spectrum_f; tmp(tmp<max(tmp)/50) = 0; [bandwidth_f,f0_pulse] = calc_RMS(f_stft,tmp); bandwidth_f = bandwidth_f*2*sqrt(2);
-% Minimum window determines the minimum sampling rate under the frequency domian
-% A window size smaller than this number is unable to sample spectral features with an enough resolution.
+% -------------------------------------------------------------------------
+% **Determine the sliding window size to correctly resolve the field in frequency
+%
+% Minimum window determines the minimum sampling rate (i.e. the maximum frequency sampling period) under the frequency domian
+% A window size smaller than this number is unable to sample spectral features with enough resolution.
 % Restriction: N/10 points <= window size < N/2 points
-window_size_for_f = max(round(N/10),min(floor(f_feature/bandwidth_f),floor(N/2)));
+%
+% Find the FWHM bandwidth
+f_stft = (-floor(N/2):ceil(N/2)-1)/N'; % in "discrete" unit: -0.5 ~ 0.5 Hz
+tmp = spectrum_f; tmp(tmp<max(tmp)/50) = 0; [bandwidth_f,f0_pulse] = calc_RMS(f_stft,tmp); bandwidth_f = bandwidth_f*2*sqrt(2);
+% In certain scenarios, such as burst-mode operations where there are many
+% pulses in the time window, sometimes we want to see the time-frequency
+% relation of each pulse. However, due to temporal interference (same color
+% at different times), spectrum exhibits strong modulations if Fourier
+% transform is applied to the entire time window. This makes visualization
+% of a single pulse difficult. This can be resolved by removing the 
+% requirement on the minimum window size. As the sliding window is small 
+% such that it never covers more than two pulses, such temporal 
+% interference vanishes. 
+if ignore_temporal_interference
+    control_interference = 0; % remove the minimum requirement of window, making it the smallest possible
+else
+    control_interference = 1;
+end
+% Find the window size
+window_size_for_f = max(round(N/10*control_interference),min(floor(f_feature/bandwidth_f),floor(N/2)));
 
-t_stft = (0:N-1)';
+% **Determine the sliding window size to correctly resolve the field in time
+%
+% Maximum window determines the minimum scanning rate of stft under the time domian
+% Restriction: 8 points <= window size
+%
+% Find the FWHM duration
+t_stft = (0:N-1)'; % in "discrete" unit; sampling period is 1
 tmp = intensity; tmp(tmp<max(tmp)/50) = 0; [duration,t0_pulse] = calc_RMS(t_stft,tmp); duration = duration*2*sqrt(2);
 clearvars tmp; % remove the unused variable
-% Maximum window determines the minimum scanning of stft under the time domian
-% % Restriction: 8 points <= window size
+% Find the window size
 window_size_for_t = max(8,floor(duration/t_feature));
 
 % window_size_for_t sets the time window to resolute temporal features (the smaller the better)
@@ -182,7 +209,8 @@ window_size_for_t = max(8,floor(duration/t_feature));
 if window_size_for_f <= window_size_for_t
     enough_resolution = true;
     window_size = round((window_size_for_f+window_size_for_t)/2); % the window for the common short-time-Fourier-transform
-else % start with the minimum window size; a multiresolution stft will be applied below
+else % start with the minimum window size
+     % A multiresolution stft will be applied below with sliding window size varying from window_size_for_t to window_size_for_f
     enough_resolution = false;
     window_size = window_size_for_t;
     nfft_highFResolution = 2^nextpow2(window_size_for_f); % the number of points for fft
@@ -191,27 +219,30 @@ end
 Fs = 1/dt; % the sampling rate
 
 %% Compute the first spectrogram
-% "fft" in Agrawal = "ifft" in MATLAB
+% "fft" in Agrawal's Nonlinear Fiber Optics = "ifft" in MATLAB
 % F[x*]=invF[x]*
 % And "spectrogram" take "fft operation in MATLAB", so we need to
 % transform it into "fft in Agrawal", that is, "ifft in MATLAB".
 nfft = max(256,2^nextpow2(window_size)); % the number of points for fft
+                                         % If nfft ~= window_size, zero-padding will be applied during each sliding fft.
 noverlap = floor(window_size*0.9); % the overlap of the window; I choose to have 90% overlap.
 [~,f_tmp,t_tmp,psd] = spectrogram(conj(field),window_size,noverlap,nfft,Fs,'centered','yaxis'); % specifying 'centered' is required in case that the field is real-valued
 
 if enough_resolution
-    final_df_tmp = Fs/nfft;
+    final_df_spectrogram = Fs/nfft;
     final_f_tmp = f_tmp;
 else
     % The final generated frequency sampling is determined by the largest nfft
-    final_df_tmp = Fs/nfft_highFResolution;
-    final_f_tmp = (-(ceil(nfft_highFResolution/2)-1):floor(nfft_highFResolution/2))'*final_df_tmp;
+    final_df_spectrogram = Fs/nfft_highFResolution;
+    final_f_tmp = (-(ceil(nfft_highFResolution/2)-1):floor(nfft_highFResolution/2))'*final_df_spectrogram;
 end
 
-final_dt_tmp = mean(diff(t_tmp)); % this dt is the finest and is chosen as the final dt in a multi-resolution spectrogram
+final_dt_spectrogram = mean(diff(t_tmp)); % this dt is the finest and is chosen as the final dt in a multi-resolution spectrogram
 
+% psd has the unit following "J/dt_spectrogram/df_spectrogram".
+% df_spectrogram = (Fs/nfft) = 1/(dt*nfft) = 1/sliding_time_window_in_fft
 I_psd = sum(psd,1)*(Fs/nfft);    I_psd(I_psd<max(I_psd)/100) = inf; % intensity from psd
-f_psd = sum(psd,2)*final_dt_tmp; f_psd(f_psd<max(f_psd)/100) = inf; % spectrum from psd
+f_psd = sum(psd,2)*final_dt_spectrogram; f_psd(f_psd<max(f_psd)/100) = inf; % spectrum from psd
 normT_psd = psd./I_psd; % transformed into normalized energy w.r.t. the intensity
 normF_psd = psd./f_psd; % transformed into normalized energy w.r.t. the spectrum
 
@@ -222,14 +253,17 @@ normF_psd = psd./f_psd; % transformed into normalized energy w.r.t. the spectrum
 % (up to >30 GB from my experiences with ultrafast pulses).
 % Hence, it's important to pick only the region that　contains the useful
 % information
+%
+% useful_t follows a convention whose first point is 0
+% tlim follows user's input whose first point is t(1)
 if isempty(tlim)
     useful_t =  (t0_pulse + duration*3*[-1,1])*dt; % time points around the pulse
     
     tlim = useful_t + t(1); tlim(1) = max(t(1),tlim(1)); tlim(2) = min(t(end),tlim(2));
 else
-    useful_t = tlim - t(1) + final_dt_tmp*[-1,1];
+    useful_t = tlim - t(1) + final_dt_spectrogram*[-1,1]; % "-t(1)" is to be conform with MATLAB's output t_tmp which starts from 0
 end
-% the desired region is determined by the user input, wavelengthlim, or
+% The desired region is determined by the user input, wavelengthlim, or
 % automatically selecting points near the pulse
 if isempty(wavelengthlim)
     if lambda_or_f
@@ -255,7 +289,7 @@ if isempty(wavelengthlim)
     end
 else
     flim = c./[wavelengthlim(2),wavelengthlim(1)];
-    useful_f = flim - f(floor(N/2)+1) + final_df_tmp*[-1,1];
+    useful_f = flim - f(floor(N/2)+1) + final_df_spectrogram*[-1,1];
 end
 useful_t_idx = t_tmp>useful_t(1) & t_tmp<useful_t(2);
 useful_f_idx = final_f_tmp>useful_f(1) & final_f_tmp<useful_f(2);
@@ -268,7 +302,7 @@ t_spectrogram = t_tmp + t(1);                  t_spectrogram = t_spectrogram(use
 f_spectrogram = final_f_tmp + f(floor(N/2)+1); f_spectrogram = f_spectrogram(useful_f_idx); % the frequency points of the spectrogram, which corresponds to the input "f"
 
 final_t_tmp = t_tmp(useful_t_idx); % from "spectrogram()"; start with 0
-final_f_tmp = final_f_tmp(useful_f_idx); % from "spectrogram()"; centered with 0
+final_f_tmp = final_f_tmp(useful_f_idx); % from "spectrogram()"; centered at 0
 
 normT_psd = interp2(t_tmp,f_tmp,normT_psd,final_t_tmp,final_f_tmp,'linear',0);
 normF_psd = interp2(t_tmp,f_tmp,normF_psd,final_t_tmp,final_f_tmp,'linear',0);
@@ -305,8 +339,8 @@ if ~enough_resolution
     % Recover back to the correct unit
     I_spectrogram = interp1(t,intensity,t_spectrogram,'linear',0);
     sf_spectrogram = interp1(f,spectrum_f,f_spectrogram,'linear',0);
-    T_psd = (max_normT_psd.*min_normT_psd).*I_spectrogram*final_df_tmp; % use the signal intensity to recover from normalized energy
-    F_psd = (max_normF_psd.*min_normF_psd).*sf_spectrogram*final_dt_tmp; % use the signal spectrum to recover from normalized energy
+    T_psd = (max_normT_psd.*min_normT_psd).*I_spectrogram*final_df_spectrogram; % use the signal intensity to recover from normalized energy
+    F_psd = (max_normF_psd.*min_normF_psd).*sf_spectrogram*final_dt_spectrogram; % use the signal spectrum to recover from normalized energy
     
     % Normalize them for comparison after multiplying max_psd and min_psd
     current_T_psd_energy = sum(sum(T_psd,1),2);
@@ -318,10 +352,10 @@ if ~enough_resolution
     psd = min(cat(3,T_psd,F_psd),[],3);
 else
     I_spectrogram = interp1(t,intensity,t_spectrogram,'linear',0);
-    psd =normT_psd.*I_spectrogram*final_df_tmp; % use the signal intensity to recover from normalized energy
+    psd = normT_psd.*I_spectrogram*final_df_spectrogram; % use the signal intensity to recover from normalized energy
 end
 % Normalized to the total energy
-current_psd_energy = sum(sum(psd,1),2)*final_df_tmp*final_dt_tmp;
+current_psd_energy = sum(sum(psd,1),2)*final_df_spectrogram*final_dt_spectrogram;
 original_energy = sum(abs(field).^2)/Fs;
 calibration_factor = original_energy/current_psd_energy;
 psd = psd*calibration_factor;
@@ -369,10 +403,14 @@ if plot_yes
     else
         pcolor(t_spectrogram,f_spectrogram(positive_wavelength:end),psd(positive_wavelength:end,:))
     end
-    shading interp; colormap(jet);
-    cb = colorbar('location','south','Color','[1 1 1]');
+    shading interp;
+    cb = colorbar('location','south');
+    % colormap(jet); set(cb,'Color',[1,1,1]);
+    ccc=whitejet_lower(1024); colormap(ccc); set(cb,'Color',[0,0,0]);
+    set(gca,'LineWidth',2);
+    
     if log_yes
-        caxis([min_colormap_psd,0]);
+        clim([min_colormap_psd,0]);
     end
     %{
     if lambda_or_f
@@ -443,8 +481,8 @@ end
 
 end
 
-%% helper functions
-function [t,f,field] = expand_with_zeros(t,f,field)
+%% Helper functions
+function [t,f,field] = expand_Twindow_with_zeros(t,f,field)
 % During the computation of spectrograms, the maximum window size used can
 % be N/2. This leaves both edges of the spectrogram full of zeros 
 % eventually. As a result, I add zeros to both temporal edges if the field 
@@ -464,10 +502,13 @@ field_threshold = max(abs(field))/10;
 pulse_left_edge = find(abs(field)>field_threshold,1);
 pulse_right_edge = find(abs(field)>field_threshold,1,'last');
 
-if pulse_left_edge < ceil(N/4) || pulse_right_edge > ceil(N*3/4)
+edge_ratio = 8; % must be even
+if pulse_left_edge < ceil(N*(edge_ratio/2-1)/edge_ratio) || pulse_right_edge > ceil(N*(edge_ratio/2+1)/edge_ratio)
     t = interp1(1:N,t,1:N*2,'linear','extrap')'; t = t - t(N+1) + t0;
     f = interp1(1:N,f,1:0.5:(N+0.50001),'linear','extrap')';
     field = [zeros(ceil(N/2),1);field;zeros(floor(N/2),1)];
+
+    [t,f,field] = expand_Twindow_with_zeros(t,f,field);
 end
 
 end
@@ -476,8 +517,8 @@ function [t,f,field] = useful_part(t,f,field)
 % The "field" can have too much unuseful information. This function
 % computes the pulse bandwidth and takes only the part that contains the
 % pulse.
-% It also downsamples the field if it's too highly sampled to speed up the
-% spectrogram computation.
+% It also downsamples the field (in time) if it's too highly sampled to 
+% speed up the spectrogram computation.
 
 N = length(f);
 
@@ -532,3 +573,95 @@ T2 = trapz(x,x.^2.*y)./area;
 RMS = sqrt(T2-T1.^2);
 
 end
+
+% =========================================================================
+% =========================================================================
+% =========================================================================
+%% whitejet_lower()
+% This was originally in a separate MATLAB function. Since I would like 
+% this calc_spectrogram() to be self-contained, I copied the whole function
+% content into here.
+% ----------------------------------------------------------------------- %
+% FUNCTION "whitejet": defines a new colormap with the same colors        %
+% that "jet", but it also replaces the green tones with white ones. This  %
+% useful when a signed metric is depicted, and its null values are useless.
+% The color structure is the following:                                   %
+%                                                                         %
+%           DR  R       Y       G       C       B   W                     %
+%           |---|-------|-------|?------|?------|---|                     %
+%           0  0.1     0.3     0.5     0.7     0.9  1                     %
+% where:                                                                  %
+%       - DR:   Deep Red    (RGB: 0.5 0 0)                                %
+%       - R:    Red         (RGB: 1 0 0)                                  %
+%       - Y:    Yellow      (RGB: 1 1 0)                                  %
+%       - W:    White       (RGB: 1 1 1)                                  %
+%       - C:    Cyan        (RGB: 0 1 1)                                  %
+%       - B:    Blue        (RGB: 0 0 1)                                  %
+%       - DB:   Deep Blue   (RGB: 0 0 0.5)                                %
+%                                                                         %
+%   Input parameters:                                                     %
+%       - m:    Number of points (recommended: m > 64, min value: m = 7). %
+%                                                                         %
+%   Output variables:                                                     %
+%       - J:    Colormap in RGB values (dimensions [mx3]).                %
+% ----------------------------------------------------------------------- %
+%   Example of use:                                                       %
+%       C = 2.*rand(5,100)-1;                                             %
+%       imagesc(C);                                                       %
+%       colormap(whitejet);                                               %
+%       colorbar;                                                         %
+% ----------------------------------------------------------------------- %
+%       - Author:   Víctor Martínez-Cagigal                               %
+%       - Date:     16/05/2018                                            %
+%       - Version:  1.0                                                   %
+%       - E-mail:   victor.martinez (at) gib (dot) tel (dot) uva (dot) es %
+%                                                                         %
+%       Biomedical Engineering Group (University of Valladolid), Spain    %
+% ----------------------------------------------------------------------- %
+function J = whitejet_lower(m)
+
+if nargin < 1
+   f = get(groot,'CurrentFigure');
+   if isempty(f)
+      m = size(get(groot,'DefaultFigureColormap'),1);
+   else
+      m = size(f.Colormap,1);
+   end
+end
+
+% Colors
+color_palette = [1/2 0 0;   % Deep red
+                 1 0 0;     % Red
+                 1 1 0;     % Yellow
+                 1/2 1 1/2; % Green
+                 0 1 1;     % Cyan
+                 0 0 1;     % Blue
+                 1 1 1];    % White
+             
+% Compute distributions along the samples
+color_dist = cumsum([0 1/10 1/5 1/5 1/5 1/5 1/10]);
+color_samples = round((m-1)*color_dist)+1;
+
+% Make the gradients
+J = zeros(m,3);
+J(color_samples,:) = color_palette(1:7,:);
+diff_samples = diff(color_samples)-1;
+for d = 1:1:length(diff_samples)
+    if diff_samples(d)~=0
+        color1 = color_palette(d,:);
+        color2 = color_palette(d+1,:);
+        G = zeros(diff_samples(d),3);
+        for idx_rgb = 1:1:3
+            g = linspace(color1(idx_rgb), color2(idx_rgb), diff_samples(d)+2);
+            g([1, length(g)]) = [];
+            G(:,idx_rgb) = g';
+        end
+        J(color_samples(d)+1:color_samples(d+1)-1,:) = G;
+    end
+end
+J = flipud(J);
+
+end
+% =========================================================================
+% =========================================================================
+% =========================================================================

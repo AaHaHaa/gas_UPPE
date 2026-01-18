@@ -1,15 +1,18 @@
 function [A_out,...
           save_z,save_dz,...
           T_delay_out,...
-          delta_permittivity,relative_Ne] = SteppingCaller_gradient_pressure(fiber, sim, gas, gas_eqn,...
-                                                                             save_z, save_points,...
-                                                                             initial_condition,...
-                                                                             SK_info, SRa_info, SRb_info,...
-                                                                             prefactor,...
-                                                                             At_noise,...
-                                                                             time_window,...
-                                                                             Omega, wavelength,...
-                                                                             gas_func)
+          sim_betas_out,...
+          delta_permittivity_Raman,delta_permittivity_electronic,...
+          relative_Ne] = SteppingCaller_gradient_pressure(fiber, sim, gas, gas_eqn,...
+                                                          save_z, save_points,...
+                                                          initial_condition,...
+                                                          SK_info, SRa_info, SRb_info,...
+                                                          prefactor,...
+                                                          At_noise,...
+                                                          mode_profiles_norms,...
+                                                          time_window,...
+                                                          Omega,...
+                                                          gas_func)
 %STEPPINGCALLER_GRADIENT_PRESSURE It starts the pulse propagation.
 
 Nt = size(initial_condition.fields,1);
@@ -18,12 +21,16 @@ dt = initial_condition.dt;
 
 save_dz = zeros(save_points,1);
 T_delay_out = zeros(save_points,1);
-if sim.include_Raman && sim.scalar
-    delta_permittivity = zeros(Nt,num_modes,gas_eqn.num_Raman,save_points);
-else
-    delta_permittivity = []; % dummay variable for output
+sim_betas_out = zeros(1,2,save_points);
+delta_permittivity_Raman = []; % dummay variable for output
+delta_permittivity_electronic = []; % dummay variable for output
+if sim.scalar
+    delta_permittivity_electronic = zeros(Nt,num_modes,save_points);
+    if sim.include_Raman
+        delta_permittivity_Raman = zeros(Nt,num_modes,gas_eqn.cumsum_num_Raman(end),save_points);
+    end
 end
-if sim.photoionization_model ~= 0
+if sim.include_photoionization
     relative_Ne = zeros(Nt,1,save_points); % excited electrons due to photoionization
 else
     relative_Ne = []; % dummy variable for output
@@ -72,7 +79,7 @@ if sim.progress_bar
         sim.progress_bar_name = '';
     elseif ~ischar(sim.progress_bar_name)
         error('UPPE_propagate:ProgressBarNameError',...
-            '"sim.progress_bar_name" should be a string.');
+              '"sim.progress_bar_name" should be a string.');
     end
     h_progress_bar = waitbar(0,sprintf('%s   0.00%%',sim.progress_bar_name),...
         'Name',sprintf('Running gas MM-UPPE: %s...',sim.progress_bar_name),...
@@ -91,11 +98,11 @@ end
 
 % Use this to control the number of updated time for the gas pressure below 100 times.
 num_gas_updates = 100;
-gas_pressure_steps = (1:num_gas_updates)*(gas.pressure_out-gas.pressure_in)/num_gas_updates + gas.pressure_in;
+gas_pressure_steps = (1:num_gas_updates)*sum(gas.pressure_out-gas.pressure_in)/num_gas_updates + sum(gas.pressure_in);
 gas_i = 0;
-if gas.pressure_out > gas.pressure_in % increasing gas pressure
+if sum(gas.pressure_out) > sum(gas.pressure_in) % increasing gas pressure
     gas_stepping_condition = @(P,i) P - gas_pressure_steps(i);
-elseif gas.pressure_out < gas.pressure_in % decreasing gas pressure
+elseif sum(gas.pressure_out) < sum(gas.pressure_in) % decreasing gas pressure
     gas_stepping_condition = @(P,i) gas_pressure_steps(i) - P;
 else % same input and output pressures
     gas_stepping_condition = @(P,i) false; % There's no need to update propagating parameters due to the unchanged pressure
@@ -127,7 +134,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
 
     % Update Raman parameters and dispersion based on a different gradient pressure
     % Calculate the required parameters based on the gas pressure at the position z
-    gas_pressure = sqrt( gas.pressure_in^2 + z/fiber.L0*(gas.pressure_out^2-gas.pressure_in^2) );
+    gas_pressure = sqrt( sum(gas.pressure_in)^2 + z/fiber.L0*(sum(gas.pressure_out)^2-sum(gas.pressure_in)^2) );
     % eta is calculated with the unit, amagat
     % Ideal gas law is used here.
     eta = gas_pressure/pressure0*temperature0/gas.temperature;
@@ -135,11 +142,13 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
         [gas_i,...
          gas,gas_eqn,...
          Raw,Rbw,...
+         sim_betas,...
          D_op,D_op_upsampling] = gas_func.update_R_D(fiber,sim,gas,gas_eqn,...
                                                      gas_pressure_steps,...
                                                      gas_pressure,eta,...
                                                      time_window,...
-                                                     Omega,wavelength);
+                                                     Omega,...
+                                                     dt,last_A);
     end
 
     % Start the steppping
@@ -194,6 +203,7 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
     % This will artificially create a noisy output.
     if sim.pulse_centering
         last_A_in_time = fft(last_A,[],1);
+        last_A_in_time = last_A_in_time.*sim.damped_window.t;
         temporal_profile = abs(last_A_in_time).^2;
         temporal_profile(temporal_profile<max(temporal_profile,[],1)/10) = 0;
         TCenter = floor(sum((-floor(Nt/2):floor((Nt-1)/2))'.*temporal_profile,[1,2])/sum(temporal_profile,[1,2]));
@@ -256,10 +266,13 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
     % If it's time to save, get the result from the GPU if necessary,
     % transform to the time domain, and save it
     if z == sim.last_dz
-        if sim.include_Raman && sim.scalar
-            delta_permittivity(:,:,:,1) = calc_permittivity(sim,gas,gas_eqn,last_A,Nt);
+        if sim.scalar
+            delta_permittivity_electronic(:,:,1) = calc_electronic_permittivity(fiber,gas_eqn,mode_profiles_norms,last_A,Nt,prefactor{2},eta);
+            if sim.include_Raman
+                delta_permittivity_Raman(:,:,:,1) = calc_Raman_permittivity(fiber,sim,gas,gas_eqn,mode_profiles_norms,last_A,Nt,eta);
+            end
         end
-        if sim.photoionization_model ~= 0
+        if sim.include_photoionization
             A_out_ii = fft(last_A,[],1);
             relative_Ne(:,:,1) = calc_Ne(A_out_ii, dt, fiber.SR(1), gas, gas_eqn, sim, eta);
         end
@@ -275,14 +288,22 @@ while z+eps(z) < save_z(end) % eps(z) here is necessary due to the numerical err
             save_z(save_i) = z;
             A_out(:, :, save_i) = A_out_ii;
         end
-        if sim.include_Raman && sim.scalar
-            delta_permittivity(:,:,:,save_i) = calc_permittivity(sim,gas,gas_eqn,last_A,Nt);
+        if sim.scalar
+            delta_permittivity_electronic(:,:,save_i) = calc_electronic_permittivity(fiber,gas_eqn,mode_profiles_norms,last_A,Nt,prefactor{2},eta); %#ok
+            if sim.include_Raman
+                delta_permittivity_Raman(:,:,:,save_i) = calc_Raman_permittivity(fiber,sim,gas,gas_eqn,mode_profiles_norms,last_A,Nt,eta); %#ok
+            end
         end
-        if sim.photoionization_model ~= 0
+        if sim.include_photoionization
             relative_Ne(:,:,save_i) = calc_Ne(A_out_ii, dt, fiber.SR(1), gas, gas_eqn, sim, eta);
         end
 
         T_delay_out(save_i) = T_delay;
+        if sim.gpu_yes
+            sim_betas_out(:,:,save_i) = gather(sim_betas);
+        else
+            sim_betas_out(:,:,save_i) = sim_betas;
+        end
 
         save_i = save_i + 1;
     end
@@ -324,25 +345,34 @@ eff_range_D = max(eff_D(:)) - min(eff_D(:));
 
 end
 % -------------------------------------------------------------------------
-function delta_permittivity = calc_permittivity(sim,gas,gas_eqn,A_w,Nt)
-%CALC_PERMITTIVITY finds the Raman-induced permittivity change
+function delta_permittivity_Raman = calc_Raman_permittivity(fiber,sim,gas,gas_eqn,mode_profiles_norms,A_w,Nt,eta)
+%CALC_RAMAN_PERMITTIVITY finds the Raman-induced permittivity change
 %
 % Only the imaginary part corresponds to the actual permittiviy contribution of each Raman response.
 % The real part is retained so that it's easier to visualize the "intensity" of the phonon strength by taking abs().
 
+num_gas = length(gas.material);
 if sim.ellipticity == 0 % linear polarization
-    gas_eqn.R_delta_permittivity(:,1:2:end) = gas_eqn.R_delta_permittivity(:,1:2:end)*4;
+    for gas_i = 1:num_gas
+        if ismember(gas.material{gas_i},{'H2','D2','N2','O2','air','N2O','CO2'}) % including rotational Raman
+            gas_eqn.R_delta_permittivity(:,gas_eqn.cumsum_num_Raman(gas_i)+1) = gas_eqn.R_delta_permittivity(:,gas_eqn.cumsum_num_Raman(gas_i)+1)*4;
+        end
+    end
 end
 
-A_t_upsampling = fft(cat(1,A_w(1:gas_eqn.n,:),gas_eqn.upsampling_zeros,A_w(gas_eqn.n+1:end,:)),[],1);
+A_w_upsampling = cat(1,A_w(1:gas_eqn.n,:),gas_eqn.upsampling_zeros,A_w(gas_eqn.n+1:end,:));
 
+SR = zeros(1,size(A_w,2));
+for num_idx = 1:size(A_w,2)
+    SR(:,num_idx) = fiber.SR(num_idx,num_idx,num_idx,num_idx);
+end
 R_delta_permittivity = permute(gas_eqn.R_delta_permittivity,[1,3,2]); % make it [Nt,num_modes,Raman_type]; The Raman_type dimension are R and V
 switch gas.model
     case 0
-        delta_permittivity = fft(R_delta_permittivity.*ifft(abs(A_t_upsampling).^2, gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1),[],1);
-        delta_permittivity = delta_permittivity(gas_eqn.R_downsampling,:,:);
+        delta_permittivity_Raman = fft(R_delta_permittivity.*ifft(abs(fft(sqrt(SR)./mode_profiles_norms.*A_w_upsampling,[],1)).^2, gas_eqn.acyclic_conv_stretch(gas_eqn.Nt),1),[],1);
+        delta_permittivity_Raman = delta_permittivity_Raman(gas_eqn.R_downsampling,:,:);
     case 1
-        delta_permittivity = fft(R_delta_permittivity.*ifft(abs(A_t_upsampling).^2,[],1),[],1);
+        delta_permittivity_Raman = fft(R_delta_permittivity.*ifft(abs(fft(sqrt(SR)./mode_profiles_norms.*A_w_upsampling,[],1)).^2,[],1),[],1);
 end
 % Below follows the computational order as the electric field; however,
 % it creates strong aliasing during the second "fft()" operation due to the
@@ -361,24 +391,49 @@ end
 % downsampling. Therefore, only with an integer spectral downsampling
 % ratio, both downsampling can be done in the order of temporal-then-
 % spectral, downsampling.
-%delta_permittivity = ifft(delta_permittivity,[],1).*(permute(max(max(real(sim.mode_profiles.mode_profiles),[],1),[],2),[1,3,2])./mean(sim.mode_profiles.norms,1)).^2; % find the max delta_permittivity of each mode
-%delta_permittivity = fft(delta_permittivity([1:gas_eqn.n,gas_eqn.Nt-(Nt-gas_eqn.n-1):gas_eqn.Nt],:,:),[],1); % transform back to time domain
-
-delta_permittivity = delta_permittivity(1:floor(gas_eqn.Nt/Nt):end,:,:).*(permute(max(max(real(sim.mode_profiles.mode_profiles),[],1),[],2),[1,3,2])./mean(sim.mode_profiles.norms,1)).^2; % find the max delta_permittivity of each mode
+delta_permittivity_Raman = delta_permittivity_Raman(1:floor(gas_eqn.Nt/Nt):end,:,:);
 
 if sim.gpu_yes
-    delta_permittivity = gather(delta_permittivity);
+    delta_permittivity_Raman = gather(delta_permittivity_Raman);
 end
+
+delta_permittivity_Raman = delta_permittivity_Raman*eta;
+
+end
+% -------------------------------------------------------------------------
+function delta_permittivity_electronic = calc_electronic_permittivity(fiber,gas_eqn,mode_profiles_norms,A_w,Nt,prefactor,eta)
+%CALC_ELECTRONIC_PERMITTIVITY finds the electronically-induced permittivity change
+
+A_w_upsampling = cat(1,A_w(1:gas_eqn.n,:),gas_eqn.upsampling_zeros,A_w(gas_eqn.n+1:end,:));
+
+SR = zeros(1,size(A_w,2));
+for num_idx = 1:size(A_w,2)
+    SR(:,num_idx) = fiber.SR(num_idx,num_idx,num_idx,num_idx);
+end
+
+% delta_permittivity(t) = 3/4*epsilon0*X3*|A(t)|^2 in narrowband case where X3 is a constant
+% In general, X3 is frequency-dependent, so we need to modify this into
+%
+% delta_permittivity = 3/4*epsilon0* invF[ sqrt(X3(omega)) * A(omega)  ]
+%
+% to incorporate frequency-dependent electronic effect with the field.
+delta_permittivity_electronic = abs(fft(sqrt(SR)./mode_profiles_norms.*sqrt(eta*prefactor).*A_w_upsampling)).^2;
+delta_permittivity_electronic = delta_permittivity_electronic(1:floor(gas_eqn.Nt/Nt):end,:);
 
 end
 % -------------------------------------------------------------------------
 function relative_Ne = calc_Ne(A_t, dt, inverse_Aeff, gas, gas_eqn, sim, eta)
 
-Ne = photoionization_PPT_model(A_t, inverse_Aeff, gas.ionization.energy, sim.f0, dt, gas.Ng*eta,...
-                               gas.ionization.l, gas.ionization.Z,...
-                               gas_eqn.erfi_x, gas_eqn.erfi_y,...
-                               sim.ellipticity);
-relative_Ne = Ne/(gas.Ng*eta);
+num_gas = length(gas.material);
+Ne = 0; % initialization
+for gas_i = 1:num_gas
+    Ne_i = photoionization_PPT_model(A_t, inverse_Aeff, gas.(gas.material{gas_i}).ionization.energy, sim.f0, dt, gas.Ng(gas_i)*eta,...
+                                     gas.(gas.material{gas_i}).ionization.l, gas.(gas.material{gas_i}).ionization.Z,...
+                                     gas_eqn.erfi_x, gas_eqn.erfi_y,...
+                                     sim.ellipticity);
+    Ne = Ne + Ne_i;
+end
+relative_Ne = Ne/sum(gas.Ng*eta);
 
 if sim.gpu_yes
     relative_Ne = gather(relative_Ne);

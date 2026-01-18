@@ -4,7 +4,7 @@
 
 close all; clearvars;
 
-addpath('../../../user_helpers','../../../broadband UPPE algorithm');
+addpath('../../user_helpers','../../broadband UPPE algorithm');
 
 %% Setup parameters
 c = 299792458*1e-12; % m/ps
@@ -17,7 +17,7 @@ sim.f0 = f0;
 sim.progress_bar_name = 'photoionization';
 sim.pulse_centering = false;
 sim.photoionization_model = true; % activate photoionization modeling
-%sim.gpu_yes = false;
+sim.gpu_yes = false;
 
 num_save = 100;
 fiber.L0 = 0.2; % m; propagation length
@@ -56,10 +56,10 @@ gas.temperature = 288; % K
 gas.pressure = 10*1.01325e5; % Pa; gas pressure
 gas.wavelength_order = 6; % The code recomputes the propagation constant to ensure that it has smooth higher-order derivatives up this order; set this to 6, currently maximum implemented value in mySpline.cu, all the time
 gas.mode_profile_wavelength = 800e-9; % m; the wavelength of the mode profile used to compute SR values and overlap integrals, etc.
-gas.material = 'He';
+gas.material = {'He'};
 gas.fiber_type = 'AR_HC_PCF';
 gas.num_tubes = 7; % the number of tubes in the anti-resonant fiber
-gas.r_tube = 12.5e-6; % m; the tube radius (not core!)
+gas.r_tube = 20e-6; % m; the tube radius (not core!)
 gas.t_tube = 215e-9; % m; the tube's wall thickness of anti-resonant fibers
 gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles for SR values and overlap integrals, etc.
 
@@ -71,7 +71,7 @@ gas.xy_sampling = 101; % spatial sampling number for computing the mode profiles
 
 %% Initial condition
 tfwhm = 0.02; % ps
-total_energy = 5.1e3; % nJ
+total_energy = 5.6e3; % nJ
 pump_wavelength = 800e-9; % m
 freq_shift = c/pump_wavelength - sim.f0;
 initial_condition = build_MMgaussian(tfwhm,time_window,total_energy,1,Nt,{'ifft',freq_shift});

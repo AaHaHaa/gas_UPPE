@@ -2,12 +2,18 @@ function sim_betas = calc_sim_betas(fiber,dt,Omega,fields)
 %CALC_SIM_BETAS It computes the sim.betas used in UPPE, where sim.betas(1)
 %is a free parameter to facilitate simulations and sim.betas(2) is the
 %inverse velocity of the moving frame
+%
+% Input arguments:
+%   fiber
+%   dt
+%   Omega
+%   fields: spectral field = ifft(temporal_fields)
 
 % Obtain the betas of the input pulse
 fftshift_Omega = fftshift(Omega,1);
-spectrum = sum(abs(fftshift(ifft(fields,[],1),1)).^2,2);
+spectrum = sum(abs(fftshift(fields,1)).^2,2);
 omega0 = sum(fftshift_Omega.*spectrum)/sum(spectrum); % 2*pi*THz; the pulse center frequency (under shifted omega)
-Omega_range = 1/dt; % 2*pi*THz
+Omega_range = 2*pi/dt; % 2*pi*THz
 omegas_idx_near_pulse = fftshift_Omega>omega0-Omega_range/5 & fftshift_Omega<omega0+Omega_range/5;% pick only the data near the pulse center frequency to find its beta0 and beta1
 clear spectrum omega0 Omega_range;
 

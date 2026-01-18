@@ -15,9 +15,9 @@ addpath('helper functions','../Gas absorption spectra/');
 
 use_gpu = false; % GPU
 
-material = 'N2';
+material = {'N2'};
 
-pressure = 100; % atm
+pressure = [100]; %#ok atm
 temperature = 288.15; % 15 degree Celsius
 core_radius = 150e-6; % core radius; m
 
@@ -43,17 +43,26 @@ pressure = pressure*1.01325e5; % Pa
 pressure0 = 1.01325e5; % Pa
 temperature0 = 273.15; % 0 degree Celsius
 eta = (pressure/temperature)/(pressure0/temperature0); % gas density (in amagat)
-n_gas = find_n_gas(material,wavelength*1e-9,eta);
+% Summation of the index, real(n), is based on (permittivity minus one)
+% The loss, however, is directly summable.
+num_gas = length(material);
+n_gas = 1; % initialization
+for gas_i = 1:num_gas
+    n_gas_i = find_n_gas(material{gas_i},wavelength*1e-9,eta(gas_i));
+    n_gas = sqrt(1 + (real(n_gas).^2-1) + (real(n_gas_i).^2-1)) + 1i*(imag(n_gas)+imag(n_gas_i));
+end
 
 cuda_dir_path = '../cuda';
 diff_order = 6;
 n_Ag = calc_n_Ag(wavelength,use_gpu,cuda_dir_path,diff_order);
 
-if abs(round(pressure/1.01325e5)-pressure/1.01325e5) < eps(1) % pressure is an integer number of atm
-    saved_filename = sprintf('info_Ag_coating_%s_%dum_%datm.mat',material,core_radius*2*1e6,pressure/1.01325e5);
+material_name = sprintf('%s',material{:});
+if all(abs(round(pressure/1.01325e5)-pressure/1.01325e5) < eps(1)) % pressure is an integer number of atm
+    pressure_name = sprintf('%d',pressure/1.01325e5);
 else
-    saved_filename = sprintf('info_Ag_coating_%s_%dum_%.1fatm.mat',material,core_radius*2*1e6,pressure/1.01325e5);
+    pressure_name = sprintf('%.1f',pressure/1.01325e5);
 end
+saved_filename = sprintf('info_Ag_coating_%s_%dum_%satm.mat',material_name,core_radius*2*1e6,pressure_name);
 
 %%
 % the mode index

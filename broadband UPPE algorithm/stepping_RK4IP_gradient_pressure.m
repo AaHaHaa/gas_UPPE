@@ -312,15 +312,21 @@ else
     nonlinear = prefactor{2}.*ifft(Kerr,[],1);
 end
 
-if sim.photoionization_model
-    [Ne,DNeDt] = photoionization_PPT_model(At, inverse_Aeff, gas.ionization.energy, sim.f0, dt, gas.Ng*eta,...
-                                           gas.ionization.l, gas.ionization.Z,...
-                                           gas_eqn.erfi_x, gas_eqn.erfi_y,...
-                                           sim.ellipticity);
-    
+if sim.include_photoionization
     inverse_A2 = abs(At).^2;
     inverse_A2(inverse_A2<max(inverse_A2)/1e5) = max(inverse_A2)/1e5;
-    nonlinear_photoionization = prefactor{3}.*ifft(Ne.*At,[],1) + prefactor{4}.*ifft(DNeDt./inverse_A2.*At,[],1);
+
+    num_gas = length(gas.material);
+    nonlinear_photoionization = 0; % initialization
+    for gas_i = 1:num_gas
+        [Ne,DNeDt] = photoionization_PPT_model(At, inverse_Aeff, gas.(gas.material{gas_i}).ionization.energy, sim.f0, dt, gas.Ng(gas_i)*eta,...
+                                               gas.(gas.material{gas_i}).ionization.l, gas.(gas.material{gas_i}).ionization.Z,...
+                                               gas_eqn.erfi_x, gas_eqn.erfi_y,...
+                                               sim.ellipticity);
+        
+        nonlinear_photoionization = nonlinear_photoionization + ...
+                                    prefactor{3}.*ifft(Ne.*At,[],1) + gas.(gas.material{gas_i}).ionization.energy*prefactor{4}.*ifft(DNeDt./inverse_A2.*At,[],1);
+    end
 else
     nonlinear_photoionization = 0;
 end

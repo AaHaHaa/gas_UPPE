@@ -17,9 +17,12 @@ switch material
                  % n^2 - 1 = ...
         a = [1.898367, 1.922297, 0.87651, 0.11887, 0.95699];
         b = [0.15,     0.25,     0.35,    0.45,    27.3861];
-    case 'H2' % From E. R. Peck and S. Hung. Refractivity and dispersion of hydrogen in the visible and near infrared, J. Opt. Soc. Am. 67, 1550-1554 (1977)
-              % n - 1 = ...
-              % At 0 degree Celsius temperature and 101325 Pa
+    case {'H2','D2'} % From E. R. Peck and S. Hung. Refractivity and dispersion of hydrogen in the visible and near infrared, J. Opt. Soc. Am. 67, 1550-1554 (1977)
+                     % n - 1 = ...
+                     % At 0 degree Celsius temperature and 101325 Pa
+                     %
+                     % There is no D2 refractive index in the Sellmeier's formulation out there, so H2's is used instead.
+                     % CRC Handbook of Optical Materials has D2 only in a narrowband range, so it's not useful.
         a =      [0.0148956/180.7, 0.0049037/92];
         b = sqrt([        1/180.7,         1/92]);
     case 'Xe' % From A. Börzsönyi,Z. Heiner, M. P. Kalashnikov, A. P. Kovács, and K. Osvay, Dispersion measurement of inert gases and gas mixtures at 800 nm, Appl. Opt. 47, 4856-4863 (2008)
@@ -33,11 +36,11 @@ switch material
         a =      [0.05792105/238.0185, 0.00167917/57.362];
         b = sqrt([         1/238.0185,          1/57.362]);
     case {'N2','N2O'} % Check "refractiveindex.info"
-              % From E. R. Peck and B. N. Khanna. Dispersion of nitrogen, J. Opt. Soc. Am. 56, 1059-1063 (1966)
-              % n - 1 = ...
-              % At 0 degree Celsius temperature and 101325 Pa
-              %
-              % There is no N2O refractive index out there, so N2's is used instead.
+                      % From E. R. Peck and B. N. Khanna. Dispersion of nitrogen, J. Opt. Soc. Am. 56, 1059-1063 (1966)
+                      % n - 1 = ...
+                      % At 0 degree Celsius temperature and 101325 Pa
+                      %
+                      % There is no N2O refractive index out there, so N2's is used instead.
         a =      [6.8552e-5, 3.243157e-2/144];
         b = sqrt([        0,           1/144]);
     %{
