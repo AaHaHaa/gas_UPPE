@@ -26,7 +26,7 @@ if ~isempty(D_op) % not computing with gradient pressure
 else
     D_op_upsampling = [];
 end
-mode_profiles_norms = cat(1,sim.mode_profiles.norms(1:n),upsampling_zeros(:,1),sim.mode_profiles.norms(n+1:end)); % currently only for computing the nonlinear index change to save
+mode_profiles_norms = cat(1,sim.mode_profiles.norms(1:n,:),upsampling_zeros,sim.mode_profiles.norms(n+1:end,:)); % currently only for computing the nonlinear index change to save
 mode_profiles_norms(mode_profiles_norms==0) = Inf; % As in computing index change, this term is in the denominator, we don't this 1/0 to blow up but give zero due to the upsampling operation.
 prefactor{1} = cat(1,prefactor{1}(1:n),upsampling_zeros(:,1),prefactor{1}(n+1:end));
 prefactor{2} = cat(1,prefactor{2}(1:n,:,:),real(upsampling_zeros),prefactor{2}(n+1:end,:,:));
