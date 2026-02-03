@@ -30,7 +30,7 @@ function [optimal_offcenter_l,stretched_field,grating_size,roof_mirror_size,size
 %
 %       optimal_offcenter_l: For Offner type -> the optimal offcenter distance of the grating
 %                            For Martinez -> the distance between the grating and the lens
-%s      stretched_field: the stretched field
+%       stretched_field: the stretched field
 %       grating_size: the size of the grating (m)
 %       roof_mirror_size: the size of the roof_mirror (m)
 %       size1: For Offner type -> the size of the concave mirror
