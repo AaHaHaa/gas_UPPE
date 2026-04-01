@@ -3,8 +3,10 @@ This is the shared package to simulate pulse propagation in a gas-filled hollow-
 
 It is useful for simulating pulse compression in gases, Raman physics (e.g. soliton self-frequency shift, Raman generation, or multidimensional solitary state generation), and photoionization-induced blueshift, etc.
 
+The code is intended **solely for academic use**, reproducibility, and methodological clarity.
+
 > [!CAUTION]
-> Ar refractive index was wrong! Please update the code. I fixed the constant-pressure one on 2/20. I just fixed the gradient-pressure one (2/28). I'll keep this note here for a few days.
+> This repository is not under active development, as I finished my postdoc and am leaving academia.
 
 ## Capabilities:
 1. It solves the pulse propagation with
